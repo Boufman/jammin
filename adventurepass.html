@@ -9,9 +9,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@latest"></script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@latest"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js"></script>
-  <link rel="manifest" href="manifest.json">
   <style>
     * {
       margin: 0;
@@ -245,7 +242,6 @@
       opacity: 0.8;
     }
     
-    /* Visual effect elements */
     .sparkle {
       position: absolute;
       pointer-events: none;
@@ -268,14 +264,6 @@
       100% { transform: translateY(-50px); opacity: 0; }
     }
     
-    @media (max-width: 768px) {
-      h1 { font-size: 2rem; }
-      .theme-btn { padding: 10px 15px; font-size: 1rem; }
-      .btn { padding: 12px 20px; font-size: 1.1rem; }
-      .stat-box { padding: 10px; min-width: 90px; }
-      .stat-value { font-size: 2rem; }
-    }
-
     #lateMessage {
       display: none;
       background: rgba(255,255,255,0.9);
@@ -294,6 +282,14 @@
       padding: 20px;
       margin-top: 20px;
       border: 5px solid #26a269;
+    }
+
+    @media (max-width: 768px) {
+      h1 { font-size: 2rem; }
+      .theme-btn, .age-btn { padding: 10px 15px; font-size: 1rem; }
+      .btn { padding: 12px 20px; font-size: 1.1rem; }
+      .stat-box { padding: 10px; min-width: 90px; }
+      .stat-value { font-size: 2rem; }
     }
   </style>
 </head>
@@ -366,10 +362,6 @@
             Switch Camera 🔄
           </button>
           <button id="resetBtn" class="btn btn-secondary">Restart Game 🔁</button>
-          <button id="pvpBtn" class="btn btn-secondary">Local Duel 👥</button>
-          <button id="relayBtn" class="btn btn-secondary">Family Relay 🛰️</button>
-          <button id="dashboardBtn" class="btn btn-secondary">Grown-Up Zone 🔒</button>
-          <button id="shareBtn" class="btn btn-secondary" style="display:none;">Share Adventure 📤</button>
           <button id="calmBtn" class="btn btn-secondary">Calm Mode 🌙 Off</button>
         </div>
       </div>
@@ -389,336 +381,332 @@
       <p>It's getting late for adventures! 🌙<br>Ask a grown-up to let you play now.</p>
       <button id="overrideBtn" class="btn btn-primary">Parent Override 👨‍👩‍👧</button>
     </div>
-    
-    <div class="dashboard" id="dashboard">
-      <h2>Grown-Up Zone</h2>
-      <p>Enter PIN: <input type="password" id="pinInput" maxlength="4"></p>
-      <button id="enterPin" class="btn btn-primary">Enter</button>
-      <div id="statsContent" style="display:none;">
-        <!-- Stats populated here -->
-      </div>
-    </div>
   </div>
   
   <div class="celebrate" id="celebrate"></div>
 
   <script>
-    // Firebase config - Replace with your own Firebase project details
-    const firebaseConfig = {
-      apiKey: "AIzaSyDOCAbC123dEf456GhI789jKl012-MnO",
-      authDomain: "your-project.firebaseapp.com",
-      databaseURL: "https://your-project-default-rtdb.firebaseio.com",
-      projectId: "your-project",
-      storageBucket: "your-project.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
+    document.addEventListener('DOMContentLoaded', () => {
+      // Core elements
+      const video = document.getElementById('video');
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const startBtn = document.getElementById('startBtn');
+      const toggleCameraBtn = document.getElementById('toggleCameraBtn');
+      const resetBtn = document.getElementById('resetBtn');
+      const calmBtn = document.getElementById('calmBtn');
+      const overrideBtn = document.getElementById('overrideBtn');
+      const levelTextElement = document.getElementById('level-text');
 
-    // Game elements
-    let video = document.getElementById('video');
-    let canvas = document.getElementById('canvas');
-    let ctx = canvas.getContext('2d');
-    let detector;
-    let currentFacingMode = 'user';
-    let gameRunning = false;
-    let score = 0;
-    let passes = 0;
-    let level = 1;
-    let currentTheme = 'robot';
-    let playerAge = '2'; // Default
-    let calmMode = false;
-    let allowLatePlay = false;
-    let pvpMode = false;
-    let relayMode = false;
-    let relayRoom = null;
-    let combo = 0;
-    let frameCount = 0;
-    let highScores = JSON.parse(localStorage.getItem('arHighScores')) || {};
-    let badges = JSON.parse(localStorage.getItem('arBadges')) || [];
-    const LATE_HOUR_THRESHOLD = 17;
-    const CALM_HOUR_THRESHOLD = 18;
-    const levelTextElement = document.getElementById('level-text');
-    
-    // Game object
-    let adventureObject = {
-      x: 0,
-      y: 0,
-      radius: 40,
-      speedX: 0, // Fixed initial zero
-      speedY: 0,
-      color: '#4d7fff',
-      held: false,
-      heldHand: null, // Fixed standardization
-      type: 'robot',
-      rotation: 0
-    };
-    
-    // Second object for PvP
-    let adventureObject2 = {...adventureObject}; // Clone for player 2
-    
-    // Theme configurations [existing]
-    const THEMES = {
-      robot: {
-        name: "Robot Buddy",
-        color: '#4d7fff',
+      let detector;
+      let currentFacingMode = 'user';
+      let gameRunning = false;
+      let score = 0;
+      let passes = 0;
+      let level = 1;
+      let currentTheme = 'robot';
+      let playerAge = '2';
+      let calmMode = false;
+      let allowLatePlay = false;
+      let frameCount = 0;
+
+      const LATE_HOUR_THRESHOLD = 17;
+      const CALM_HOUR_THRESHOLD = 18;
+
+      // Game object
+      const adventureObject = {
+        x: 0,
+        y: 0,
         radius: 40,
-        accentColor: '#ff6b00',
-        soundFreq: 440,
-        effects: ['sparkles', 'gears']
-      },
-      dragon: {
-        name: "Baby Dragon",
-        color: '#26a269',
-        radius: 45,
-        accentColor: '#ff6b00',
-        soundFreq: 349.23,
-        effects: ['fire', 'sparkles']
-      },
-      spaceship: {
-        name: "Spaceship",
-        color: '#9141ac',
-        radius: 35,
-        accentColor: '#1a5fb4',
-        soundFreq: 523.25,
-        effects: ['stars', 'thrusters']
-      },
-      soccer: {
-        name: "Soccer Ball",
-        color: '#ffffff',
-        radius: 38,
-        accentColor: '#000000',
-        soundFreq: 392,
-        effects: ['grass', 'cheers']
+        speedX: 0,
+        speedY: 0,
+        color: '#4d7fff',
+        held: false,
+        heldHand: null,
+        type: 'robot',
+        rotation: 0
+      };
+
+      const THEMES = {
+        robot: { name: "Robot Buddy", color: '#4d7fff', radius: 40, soundFreq: 440 },
+        dragon: { name: "Baby Dragon", color: '#26a269', radius: 45, soundFreq: 349.23 },
+        spaceship: { name: "Spaceship", color: '#9141ac', radius: 35, soundFreq: 523.25 },
+        soccer: { name: "Soccer Ball", color: '#ffffff', radius: 38, soundFreq: 392 }
+      };
+
+      const LEVELS = [
+        { name: "Easy - Let's Play!", requiredPasses: 5, speed: 1 },
+        { name: "Getting Better!", requiredPasses: 8, speed: 1.3 },
+        { name: "Super Passer!", requiredPasses: 12, speed: 1.6 },
+        { name: "Expert Mode!", requiredPasses: 15, speed: 2 },
+        { name: "Master Champion!", requiredPasses: 20, speed: 2.5 }
+      ];
+
+      const KEYPOINTS = {
+        left_wrist: 9,
+        right_wrist: 10
+      };
+
+      const visualEffects = [];
+
+      // Time checks
+      function isLatePlayTime() {
+        return new Date().getHours() >= LATE_HOUR_THRESHOLD;
       }
-    };
-    
-    // Level configurations [existing, adjusted in applyAgeSettings]
-    const LEVELS = [
-      { name: "Easy - Let's Play!", requiredPasses: 5, speed: 1 },
-      { name: "Getting Better!", requiredPasses: 8, speed: 1.3 },
-      { name: "Super Passer!", requiredPasses: 12, speed: 1.6 },
-      { name: "Expert Mode!", requiredPasses: 15, speed: 2 },
-      { name: "Master Champion!", requiredPasses: 20, speed: 2.5 }
-    ];
-    
-    // Keypoints [existing]
-    const KEYPOINTS = {
-      left_wrist: 9,
-      right_wrist: 10,
-      left_elbow: 7,
-      right_elbow: 8,
-      left_shoulder: 5,
-      right_shoulder: 6
-    };
-    
-    // Visual effects [existing]
-    const visualEffects = [];
-    
-    // PWA Service Worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(err => console.error('SW error', err));
-    }
-    
-    // Load override
-    const storedOverride = localStorage.getItem('arLatePlayOverride');
-    if (storedOverride) {
-      const overrideTime = new Date(storedOverride);
-      if (new Date() - overrideTime < 24 * 60 * 60 * 1000) {
+
+      function detectEveningPlay() {
+        return new Date().getHours() >= CALM_HOUR_THRESHOLD;
+      }
+
+      function showLatePlayMessage() {
+        document.getElementById('lateMessage').style.display = 'block';
+      }
+
+      function applyCalmMode() {
+        calmMode = detectEveningPlay() || calmMode;
+        calmBtn.textContent = `Calm Mode 🌙 ${calmMode ? 'On' : 'Off'}`;
+      }
+
+      function initGame() {
+        if (isLatePlayTime() && !allowLatePlay) {
+          showLatePlayMessage();
+          return;
+        }
+        applyCalmMode();
+        score = 0;
+        passes = 0;
+        level = 1;
+        adventureObject.held = false;
+        adventureObject.heldHand = null;
+        adventureObject.speedX = 0;
+        adventureObject.speedY = 0;
+        adventureObject.rotation = 0;
+        document.getElementById('score').textContent = score;
+        document.getElementById('passes').textContent = passes;
+        document.getElementById('level').textContent = level;
+        levelTextElement.textContent = `Level ${level}: ${LEVELS[level - 1].name}`;
+        gameRunning = true;
+      }
+
+      async function startCamera(facingMode = 'user') {
+        try {
+          if (video.srcObject) {
+            video.srcObject.getTracks().forEach(track => track.stop());
+          }
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+            audio: false
+          });
+          video.srcObject = stream;
+          currentFacingMode = facingMode;
+          video.onloadedmetadata = () => {
+            video.play();
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            adventureObject.x = canvas.width / 2;
+            adventureObject.y = canvas.height / 2;
+            initializePoseDetector();
+          };
+        } catch (err) {
+          console.error("Camera error:", err);
+          alert("Camera access failed. Run via localhost server (python3 -m http.server)");
+        }
+      }
+
+      async function initializePoseDetector() {
+        try {
+          await tf.setBackend('webgl');
+          if (!tf.getBackend()) await tf.setBackend('cpu');
+          const model = poseDetection.SupportedModels.MoveNet;
+          detector = await poseDetection.createDetector(model, {
+            modelType: poseDetection.movenet.modelType.SINGLEPOSE_LIGHTNING
+          });
+          console.log("Pose detector ready");
+          requestAnimationFrame(gameLoop);
+        } catch (err) {
+          console.error("Detector error:", err);
+        }
+      }
+
+      function distance(x1, y1, x2, y2) {
+        return Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+      }
+
+      async function gameLoop() {
+        if (!gameRunning || !detector) return;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        ctx.save();
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, -canvas.width, 0, canvas.width, canvas.height);
+        ctx.restore();
+
+        if (frameCount % 2 === 0) {
+          try {
+            const poses = await detector.estimatePoses(video);
+            if (poses.length > 0) {
+              const keypoints = poses[0].keypoints;
+              checkObjectInteraction(keypoints);
+            }
+          } catch (err) {
+            console.error("Pose error:", err);
+          }
+        }
+        frameCount++;
+
+        // Physics & draw
+        if (!adventureObject.held) {
+          adventureObject.x += adventureObject.speedX;
+          adventureObject.y += adventureObject.speedY;
+
+          if (adventureObject.x + adventureObject.radius > canvas.width || adventureObject.x - adventureObject.radius < 0) {
+            adventureObject.speedX = -adventureObject.speedX;
+          }
+          if (adventureObject.y + adventureObject.radius > canvas.height || adventureObject.y - adventureObject.radius < 0) {
+            adventureObject.speedY = -adventureObject.speedY;
+          }
+        }
+
+        // Clamp
+        adventureObject.x = Math.max(adventureObject.radius, Math.min(canvas.width - adventureObject.radius, adventureObject.x));
+        adventureObject.y = Math.max(adventureObject.radius, Math.min(canvas.height - adventureObject.radius, adventureObject.y));
+
+        // Simple draw (circle for now)
+        ctx.save();
+        ctx.translate(adventureObject.x, adventureObject.y);
+        adventureObject.rotation += calmMode ? 0.02 : 0.05;
+        ctx.rotate(adventureObject.rotation);
+        ctx.beginPath();
+        ctx.arc(0, 0, adventureObject.radius, 0, Math.PI * 2);
+        ctx.fillStyle = adventureObject.color;
+        ctx.fill();
+        ctx.restore();
+
+        drawVisualEffects();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      function checkObjectInteraction(keypoints) {
+        const leftWrist = keypoints[KEYPOINTS.left_wrist];
+        const rightWrist = keypoints[KEYPOINTS.right_wrist];
+        const catchFactor = playerAge === '2' ? 2.5 : 1.5;
+
+        if (adventureObject.held) {
+          const holdingWrist = adventureObject.heldHand === 'left' ? leftWrist : rightWrist;
+          if (holdingWrist.score > 0.3) {
+            adventureObject.x += (holdingWrist.x - adventureObject.x) * 0.3;
+            adventureObject.y += (holdingWrist.y - adventureObject.y) * 0.3;
+          } else {
+            adventureObject.held = false;
+            adventureObject.heldHand = null;
+          }
+
+          const otherWrist = adventureObject.heldHand === 'left' ? rightWrist : leftWrist;
+          if (otherWrist.score > 0.3 && distance(adventureObject.x, adventureObject.y, otherWrist.x, otherWrist.y) < adventureObject.radius * 2.5) {
+            adventureObject.heldHand = adventureObject.heldHand === 'left' ? 'right' : 'left';
+            passes++;
+            score += 10;
+            document.getElementById('passes').textContent = passes;
+            document.getElementById('score').textContent = score;
+            createSparkle(adventureObject.x, adventureObject.y);
+          }
+        } else {
+          if (leftWrist.score > 0.3 && distance(adventureObject.x, adventureObject.y, leftWrist.x, leftWrist.y) < adventureObject.radius * catchFactor) {
+            adventureObject.held = true;
+            adventureObject.heldHand = 'left';
+          } else if (rightWrist.score > 0.3 && distance(adventureObject.x, adventureObject.y, rightWrist.x, rightWrist.y) < adventureObject.radius * catchFactor) {
+            adventureObject.held = true;
+            adventureObject.heldHand = 'right';
+          }
+        }
+      }
+
+      function createSparkle(x, y) {
+        const count = calmMode ? 2 : 5;
+        for (let i = 0; i < count; i++) {
+          visualEffects.push({
+            x: x + (Math.random() - 0.5) * 30,
+            y: y + (Math.random() - 0.5) * 30,
+            type: 'sparkle',
+            size: Math.random() * 6 + 3,
+            life: 0.8,
+            createdAt: Date.now(),
+            velocity: { x: (Math.random() - 0.5) * 4, y: (Math.random() - 0.5) * 4 - 2 }
+          });
+        }
+      }
+
+      function drawVisualEffects() {
+        const now = Date.now();
+        for (let i = visualEffects.length - 1; i >= 0; i--) {
+          const e = visualEffects[i];
+          const age = (now - e.createdAt) / 1000;
+          if (age >= e.life) {
+            visualEffects.splice(i, 1);
+            continue;
+          }
+          const progress = age / e.life;
+          ctx.globalAlpha = 1 - progress;
+          ctx.fillStyle = '#ffcc00';
+          ctx.beginPath();
+          ctx.arc(e.x + e.velocity.x * age * 60, e.y + e.velocity.y * age * 60, e.size * (1 - progress * 0.5), 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = 1;
+      }
+
+      // Event listeners
+      startBtn.addEventListener('click', () => {
+        startCamera(currentFacingMode);
+        initGame();
+        startBtn.style.display = 'none';
+        toggleCameraBtn.style.display = 'inline-block';
+      });
+
+      toggleCameraBtn.addEventListener('click', () => {
+        const newMode = currentFacingMode === 'user' ? 'environment' : 'user';
+        startCamera(newMode);
+      });
+
+      resetBtn.addEventListener('click', () => {
+        gameRunning = false;
+        initGame();
+      });
+
+      calmBtn.addEventListener('click', () => {
+        calmMode = !calmMode;
+        applyCalmMode();
+      });
+
+      overrideBtn.addEventListener('click', () => {
         allowLatePlay = true;
-      } else {
-        localStorage.removeItem('arLatePlayOverride');
-      }
-    }
-
-    // Time checks
-    function isLatePlayTime() {
-      return new Date().getHours() >= LATE_HOUR_THRESHOLD;
-    }
-
-    function detectEveningPlay() {
-      return new Date().getHours() >= CALM_HOUR_THRESHOLD;
-    }
-
-    // Show late message
-    function showLatePlayMessage() {
-      document.getElementById('lateMessage').style.display = 'block';
-    }
-
-    // Initialize game
-    function initGame() {
-      if (isLatePlayTime() && !allowLatePlay) {
-        showLatePlayMessage();
-        return;
-      }
-      applyCalmMode();
-      applyThemeSettings();
-      applyLevelSettings();
-      applyAgeSettings();
-      score = 0;
-      passes = 0;
-      level = 1;
-      combo = 0;
-      adventureObject.held = false;
-      adventureObject.heldHand = null;
-      adventureObject.speedX = 0;
-      adventureObject.speedY = 0;
-      adventureObject2 = {...adventureObject}; // Reset PvP object
-      updateUI();
-      gameRunning = true;
-      console.log(`Game started with ${currentTheme} theme and age ${playerAge}!`);
-    }
-
-    // Apply theme [existing, with reset if mid-game]
-    // In theme click: if(gameRunning && !adventureObject.held) { adventureObject.x = canvas.width / 2; y = canvas.height / 2; speedX=0; speedY=0; }
-
-    // Apply level [existing]
-
-    // Apply age
-    function applyAgeSettings() {
-      const speedMulti = playerAge === '2' ? 0.5 : 1.5;
-      const catchFactor = playerAge === '2' ? 2.5 : 1.2;
-      const passReq = playerAge === '2' ? 3 : 10;
-      LEVELS.forEach((l, i) => {
-        LEVELS[i].requiredPasses = passReq * (i + 1);
-        LEVELS[i].speed = speedMulti;
+        localStorage.setItem('arLatePlayOverride', new Date().toISOString());
+        document.getElementById('lateMessage').style.display = 'none';
+        initGame();
       });
-      applyLevelSettings();
-    }
 
-    // Update UI [existing, plus high score check]
-    function updateUI() {
-      // [Existing]
-      if (score > (highScores[currentTheme] || 0)) {
-        highScores[currentTheme] = score;
-        localStorage.setItem('arHighScores', JSON.stringify(highScores));
-        createEffectText(canvas.width/2, canvas.height/2, 'New High Score!', '#ffd700');
-      }
-      checkBadges();
-    }
-
-    // Check level [existing]
-
-    // Level up [existing, with voice]
-    function levelUp() {
-      // [Existing]
-      const utterance = new SpeechSynthesisUtterance(`Level ${level}!`);
-      speechSynthesis.speak(utterance);
-    }
-
-    // Play sound [existing, with calm reduce and resume]
-    function playSound(type, frequency = 440, duration = 0.3) {
-      if (!window.gameAudioContext) return;
-      const audioContext = window.gameAudioContext;
-      if (audioContext.state === 'suspended') audioContext.resume();
-      // [Existing switch, with gain * (calmMode ? 0.5 : 1)]
-      // For levelup: use time = audioContext.currentTime; start(time + i*0.1)
-    }
-
-    // Create effect text [existing, with calm life = calmMode ? 2.5 : 1.5]
-
-    // Create sparkle [existing, with calm i < calmMode ? 2 : 5]
-
-    // Draw adventure object [existing]
-
-    // Draw functions [existing]
-
-    // Draw visual effects [existing]
-
-    // Celebrate [existing, skip if calmMode]
-
-    // Start camera [existing]
-
-    // Initialize detector [existing, with multipose for PvP if pvpMode]
-
-    // Distance [existing]
-
-    // Game loop [existing, with PvP logic if pvpMode (draw second object, check second interaction)]
-
-    // Check interaction [existing, with lerp follow, catchFactor, combo++, voice on pass]
-
-    // Reset game [existing, call initGame]
-
-    // Local PvP
-    function startPvp() {
-      pvpMode = true;
-      // Re-init detector with MULTIPOSE_LIGHTNING
-      initializePoseDetector();
-    }
-
-    // Async relay
-    function startRelay() {
-      relayMode = true;
-      relayRoom = Math.random().toString(36).substring(7);
-      db.ref('relays/' + relayRoom).set({stats: {passes: 0, speedX: 0, thumb: ''}});
-      // Generate QR or link: console.log(window.location.href + '?room=' + relayRoom); // Use qrcode.js if added
-      // On pass complete: const thumb = canvas.toDataURL('image/png', 0.1); db.ref('relays/' + relayRoom).update({thumb, stats: {passes, speedX: adventureObject.speedX}});
-      // Listen: db.ref('relays/' + relayRoom).on('value', snap => {
-        // if (snap.val()) { adventureObject.speedX = snap.val().stats.speedX; createEffectText('Relay Received!', '#ff6b00'); }
-      // });
-    }
-
-    // Dashboard
-    document.getElementById('dashboardBtn').addEventListener('click', () => {
-      document.getElementById('dashboard').style.display = 'block';
-    });
-    document.getElementById('enterPin').addEventListener('click', () => {
-      if (document.getElementById('pinInput').value === '1234') {
-        document.getElementById('statsContent').innerHTML = `
-          High Score (${currentTheme}): ${highScores[currentTheme] || 0}<br>
-          Badges: ${badges.join(', ') || 'None yet'}<br>
-          Total Passes: ${passes}<br>
-          Tip: Great for hand-eye coordination!
-        `;
-        document.getElementById('statsContent').style.display = 'block';
-      }
-    });
-
-    // Check badges
-    function checkBadges() {
-      if (passes >= 10 && !badges.includes('Super Passer')) {
-        badges.push('Super Passer');
-        localStorage.setItem('arBadges', JSON.stringify(badges));
-        createEffectText(canvas.width/2, canvas.height/2, 'Badge Unlocked: Super Passer!', '#ffd700');
-      }
-      // Add more badges as needed
-    }
-
-    // Event listeners [existing]
-    document.querySelectorAll('.age-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        playerAge = btn.dataset.age;
-        applyAgeSettings();
+      document.querySelectorAll('.theme-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentTheme = btn.dataset.theme;
+          adventureObject.color = THEMES[currentTheme].color;
+          adventureObject.radius = THEMES[currentTheme].radius;
+        });
       });
+
+      document.querySelectorAll('.age-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.age-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          playerAge = btn.dataset.age;
+        });
+      });
+
+      console.log("AR Adventure Pass fully loaded and ready!");
     });
-
-    document.getElementById('pvpBtn').addEventListener('click', startPvp);
-    document.getElementById('relayBtn').addEventListener('click', startRelay);
-    document.getElementById('shareBtn').addEventListener('click', () => {
-      navigator.share({title: 'AR Adventure', text: `I made ${passes} passes! Chain with me: ${window.location.href + '?room=' + relayRoom}`});
-    });
-
-    document.getElementById('overrideBtn').addEventListener('click', () => {
-      allowLatePlay = true;
-      localStorage.setItem('arLatePlayOverride', new Date().toISOString());
-      document.getElementById('lateMessage').style.display = 'none';
-      initGame();
-    });
-
-    document.getElementById('calmBtn').addEventListener('click', () => {
-      calmMode = !calmMode;
-      applyCalmMode();
-      document.getElementById('calmBtn').textContent = `Calm Mode 🌙 ${calmMode ? 'On' : 'Off'}`;
-    });
-
-    // Apply calm [existing, adjust rotation, sparkles, sounds]
-
-    // Console ready [existing]
-    console.log("AR Adventure Pass Game Ready!");
-    console.log("Click 'Start Adventure' to begin!");
   </script>
 </body>
 </html>
