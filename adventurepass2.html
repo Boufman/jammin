@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>中华AR乐园 - Chinese AR Playground</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-core@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgl@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-cpu@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-converter@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/pose-detection@latest"></script>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Ma Shan Zheng', 'ZCOOL QingKe HuangYou', cursive, sans-serif;
+      background: linear-gradient(135deg, #d32f2f 0%, #f57c00 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+      color: #333;
+    }
+    
+    @import url('https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+QingKe+HuangYou&display=swap');
+    
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 20px;
+      text-align: center;
+    }
+    
+    .header {
+      background-color: rgba(255, 255, 255, 0.95);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+      border: 5px solid #d32f2f;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .header::before {
+      content: "囍";
+      position: absolute;
+      font-size: 120px;
+      opacity: 0.1;
+      color: #d32f2f;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+    
+    h1 {
+      color: #d32f2f;
+      font-size: 3.2rem;
+      margin-bottom: 10px;
+      text-shadow: 3px 3px 0 #ffeb3b;
+      position: relative;
+      z-index: 1;
+    }
+    
+    .subtitle {
