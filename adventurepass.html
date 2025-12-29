@@ -494,7 +494,7 @@
             video.srcObject.getTracks().forEach(track => track.stop());
           }
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingMode, width: { ideal: 640 }, height: { ideal: 480 } },
+            video: { facingMode: facingMode, width: { ideal: 320 }, height: { ideal: 240 } },
             audio: false
           });
           video.srcObject = stream;
