@@ -509,7 +509,7 @@
       // Apply level settings
       function applyLevelSettings() {
         const levelSettings = LEVELS[level - 1];
-        const speedMultiplier = playerAge === '2' ? 0.8 : 1.2;
+        const speedMultiplier = playerAge === '2' ? 1.2 : 1.8;
         chineseTreasure.speedX = 2 * levelSettings.speed * speedMultiplier;
         chineseTreasure.speedY = 1.5 * levelSettings.speed * speedMultiplier;
         levelTextElement.textContent = `Level ${level}: ${levelSettings.name}`;
