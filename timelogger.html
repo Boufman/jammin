@@ -1,0 +1,1103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shift Logger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Barlow+Condensed:wght@300;400;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0e0f0f;
+      --panel:     #161818;
+      --card:      #1c1f1f;
+      --border:    #2a2e2e;
+      --border2:   #3a3f3f;
+      --amber:     #f5a623;
+      --amber-dim: #a06a10;
+      --green:     #3ecf74;
+      --green-dim: #1f7040;
+      --red:       #e05252;
+      --red-dim:   #7a2a2a;
+      --blue:      #5ba4f5;
+      --blue-dim:  #2a4a80;
+      --text:      #c8cccc;
+      --text-dim:  #5a6060;
+      --text-hi:   #eef0f0;
+      --mono:      'Share Tech Mono', monospace;
+      --sans:      'Barlow Condensed', sans-serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 16px;
+      line-height: 1.4;
+    }
+
+    /* ── Layout ── */
+    .app { display: flex; flex-direction: column; min-height: 100vh; }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border);
+      padding: 0 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 56px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+    }
+    .logo-mark {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--amber);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      background: rgba(245,166,35,0.1);
+      border: 1px solid var(--amber-dim);
+      padding: 3px 8px;
+      border-radius: 2px;
+    }
+    .logo-title {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: var(--text-hi);
+      text-transform: uppercase;
+    }
+
+    .header-clock {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text-dim);
+      letter-spacing: 0.08em;
+    }
+
+    .main {
+      flex: 1;
+      padding: 24px;
+      max-width: 1100px;
+      margin: 0 auto;
+      width: 100%;
+    }
+
+    /* ── Status Bar ── */
+    .status-bar {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 640px) {
+      .status-bar { grid-template-columns: 1fr; }
+    }
+
+    .status-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+    }
+    .status-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .status-card.inactive::before { background: var(--border2); }
+    .status-card.active::before   { background: var(--green); }
+    .status-card.trip::before     { background: var(--blue); }
+
+    .sc-label {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+    .sc-value {
+      font-family: var(--mono);
+      font-size: 26px;
+      color: var(--text-hi);
+      letter-spacing: 0.05em;
+    }
+    .sc-value.running { color: var(--green); }
+    .sc-value.trip    { color: var(--blue); }
+    .sc-sub {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+      font-family: var(--mono);
+    }
+
+    /* ── Controls ── */
+    .controls {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .controls-header {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+    }
+
+    .field-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      flex: 1;
+      min-width: 160px;
+    }
+    .field label {
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+    .field input, .field select, .field textarea {
+      background: var(--bg);
+      border: 1px solid var(--border2);
+      border-radius: 3px;
+      color: var(--text-hi);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 10px;
+      outline: none;
+      transition: border-color 0.15s;
+      width: 100%;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus {
+      border-color: var(--amber);
+    }
+    .field textarea { resize: vertical; min-height: 52px; font-family: var(--sans); font-size: 13px; }
+    .field select option { background: var(--panel); }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      font-family: var(--sans);
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 3px;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      white-space: nowrap;
+    }
+    .btn:hover  { opacity: 0.85; }
+    .btn:active { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    .btn-green  { background: var(--green);    color: #0a1a10; }
+    .btn-red    { background: var(--red);      color: #1a0a0a; }
+    .btn-blue   { background: var(--blue);     color: #0a1020; }
+    .btn-amber  { background: var(--amber);    color: #1a0e00; }
+    .btn-ghost  { background: transparent; border: 1px solid var(--border2); color: var(--text); }
+    .btn-ghost:hover { border-color: var(--text); }
+    .btn-sm     { padding: 6px 12px; font-size: 11px; }
+
+    /* ── Divider ── */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── Ledger ── */
+    .ledger-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .ledger-title {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+    }
+    .ledger-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .filter-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+    .filter-row .field { min-width: 120px; max-width: 200px; flex: 1; }
+
+    .table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead tr {
+      background: var(--panel);
+      border-bottom: 1px solid var(--border2);
+    }
+    thead th {
+      padding: 10px 14px;
+      text-align: left;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    tbody tr {
+      border-bottom: 1px solid var(--border);
+      transition: background 0.1s;
+    }
+    tbody tr:last-child { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.025); }
+
+    tbody td {
+      padding: 10px 14px;
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text);
+      white-space: nowrap;
+    }
+    .td-main { color: var(--text-hi); }
+    .td-dim  { color: var(--text-dim); }
+
+    .badge {
+      display: inline-block;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+    }
+    .badge-shift { background: rgba(62,207,116,0.15); color: var(--green); }
+    .badge-trip  { background: rgba(91,164,245,0.15); color: var(--blue); }
+
+    .mileage-flag {
+      font-size: 9px;
+      color: var(--amber);
+      letter-spacing: 0.1em;
+      font-weight: 700;
+    }
+
+    .del-btn {
+      background: none;
+      border: none;
+      color: var(--red-dim);
+      cursor: pointer;
+      font-size: 14px;
+      padding: 2px 4px;
+      line-height: 1;
+      transition: color 0.15s;
+    }
+    .del-btn:hover { color: var(--red); }
+
+    /* ── Summary ── */
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .sum-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 14px 16px;
+    }
+    .sum-label { font-size: 10px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+    .sum-val   { font-family: var(--mono); font-size: 22px; color: var(--text-hi); }
+    .sum-sub   { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+
+    /* ── Empty ── */
+    .empty {
+      text-align: center;
+      padding: 48px 20px;
+      color: var(--text-dim);
+      font-size: 13px;
+      letter-spacing: 0.05em;
+    }
+    .empty-icon { font-size: 32px; margin-bottom: 10px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-radius: 6px;
+      padding: 24px;
+      max-width: 480px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .modal h2 {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-bottom: 16px;
+      color: var(--text-hi);
+    }
+    .modal-footer { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel);
+      border: 1px solid var(--border2);
+      border-left: 3px solid var(--green);
+      border-radius: 4px;
+      padding: 12px 18px;
+      font-size: 13px;
+      color: var(--text-hi);
+      z-index: 999;
+      transform: translateX(120%);
+      transition: transform 0.25s ease;
+      max-width: 320px;
+    }
+    .toast.show { transform: translateX(0); }
+    .toast.warn  { border-left-color: var(--amber); }
+    .toast.error { border-left-color: var(--red); }
+
+    /* ── Pulse indicator ── */
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.3; }
+    }
+    .pulse-dot {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      margin-right: 6px;
+      animation: pulse 1.4s ease infinite;
+      vertical-align: middle;
+    }
+    .pulse-dot.blue { background: var(--blue); }
+
+    /* ── Tab ── */
+    .tabs {
+      display: flex;
+      gap: 0;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 20px;
+    }
+    .tab {
+      font-family: var(--sans);
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 10px 18px;
+      cursor: pointer;
+      border: none;
+      background: none;
+      color: var(--text-dim);
+      border-bottom: 2px solid transparent;
+      margin-bottom: -1px;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .tab.active { color: var(--text-hi); border-bottom-color: var(--amber); }
+    .tab:hover:not(.active) { color: var(--text); }
+
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="logo">
+      <span class="logo-mark">AU</span>
+      <span class="logo-title">Shift Logger</span>
+    </div>
+    <div class="header-clock" id="headerClock">--:-- --</div>
+  </header>
+
+  <div class="main">
+
+    <!-- Status -->
+    <div class="status-bar">
+      <div class="status-card" id="shiftStatusCard">
+        <div class="sc-label">Current Shift</div>
+        <div class="sc-value" id="shiftStatusValue">No active shift</div>
+        <div class="sc-sub" id="shiftStatusSub">Clock in to begin</div>
+      </div>
+      <div class="status-card" id="tripStatusCard">
+        <div class="sc-label">Inter-Job Trip</div>
+        <div class="sc-value" id="tripStatusValue">No active trip</div>
+        <div class="sc-sub" id="tripStatusSub">Track mileage-claimable journeys</div>
+      </div>
+    </div>
+
+    <!-- Controls -->
+    <div class="controls">
+      <div class="controls-header">Shift Controls</div>
+      <div class="field-row">
+        <div class="field">
+          <label>Employer / Location</label>
+          <input type="text" id="jobName" placeholder="e.g. Hospital, School" />
+        </div>
+        <div class="field" style="max-width:200px">
+          <label>Override Clock-In Time</label>
+          <input type="datetime-local" id="overrideStart" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Notes (optional)</label>
+          <textarea id="shiftNotes" placeholder="Ward, subject, anything relevant…"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-green" id="btnClockIn">⏵ Clock In</button>
+        <button class="btn btn-red"   id="btnClockOut" disabled>⏹ Clock Out</button>
+      </div>
+
+      <hr class="divider" />
+
+      <div class="controls-header">Inter-Job Trip <span style="color:var(--amber);font-size:10px;margin-left:8px">★ ATO-deductible journey</span></div>
+      <div class="field-row">
+        <div class="field">
+          <label>From (Job / Location)</label>
+          <input type="text" id="tripFrom" placeholder="e.g. Hospital" />
+        </div>
+        <div class="field">
+          <label>To (Job / Location)</label>
+          <input type="text" id="tripTo" placeholder="e.g. School" />
+        </div>
+        <div class="field" style="max-width:140px">
+          <label>Distance (km)</label>
+          <input type="number" id="tripKm" placeholder="km" min="0" step="0.1" />
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Trip Notes</label>
+          <textarea id="tripNotes" placeholder="Route, purpose…"></textarea>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-blue" id="btnTripStart">⏵ Start Trip</button>
+        <button class="btn btn-amber" id="btnTripEnd" disabled>⏹ End Trip</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="log">Log</button>
+      <button class="tab" data-tab="summary">Summary</button>
+    </div>
+
+    <!-- Log tab -->
+    <div class="tab-panel active" id="tab-log">
+      <div class="ledger-header">
+        <div class="ledger-title">Records</div>
+        <div class="ledger-actions">
+          <button class="btn btn-ghost btn-sm" id="btnExportCSV">↓ Export CSV</button>
+          <button class="btn btn-ghost btn-sm" id="btnClearAll" style="color:var(--red-dim)">✕ Clear All</button>
+        </div>
+      </div>
+
+      <div class="filter-row">
+        <div class="field">
+          <label>From Date</label>
+          <input type="date" id="filterFrom" />
+        </div>
+        <div class="field">
+          <label>To Date</label>
+          <input type="date" id="filterTo" />
+        </div>
+        <div class="field">
+          <label>Type</label>
+          <select id="filterType">
+            <option value="">All</option>
+            <option value="shift">Shifts</option>
+            <option value="trip">Trips</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Employer / Location</label>
+          <input type="text" id="filterJob" placeholder="Filter…" />
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table id="ledgerTable">
+          <thead>
+            <tr>
+              <th>Type</th>
+              <th>Date</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Duration</th>
+              <th>Location / Route</th>
+              <th>km</th>
+              <th>Claim</th>
+              <th>Notes</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="ledgerBody"></tbody>
+        </table>
+      </div>
+      <div id="emptyState" class="empty" style="display:none">
+        <div class="empty-icon">🗂</div>
+        No records match your filters.
+      </div>
+    </div>
+
+    <!-- Summary tab -->
+    <div class="tab-panel" id="tab-summary">
+      <div class="filter-row">
+        <div class="field">
+          <label>Period From</label>
+          <input type="date" id="sumFrom" />
+        </div>
+        <div class="field">
+          <label>Period To</label>
+          <input type="date" id="sumTo" />
+        </div>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div id="summaryTable" style="margin-top:20px"></div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Edit modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <h2>Edit Record</h2>
+    <div class="field" style="margin-bottom:12px">
+      <label>Location / Route</label>
+      <input type="text" id="editLocation" />
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Start</label>
+      <input type="datetime-local" id="editStart" />
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>End</label>
+      <input type="datetime-local" id="editEnd" />
+    </div>
+    <div class="field" style="margin-bottom:12px" id="editKmField">
+      <label>Distance (km)</label>
+      <input type="number" id="editKm" step="0.1" min="0" />
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="editNotes"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost btn-sm" id="editCancel">Cancel</button>
+      <button class="btn btn-amber btn-sm" id="editSave">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── Storage ────────────────────────────────────────────────────────────────
+const STORE_KEY = 'shiftlogger_v1';
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; }
+  catch { return []; }
+}
+function save(records) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(records));
+}
+
+let records = load();
+let activeShift = null;
+let activeTrip  = null;
+let editId      = null;
+
+// ── Utility ────────────────────────────────────────────────────────────────
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+
+function fmt(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+function fmtDate(ts) {
+  if (!ts) return '—';
+  const d = new Date(ts);
+  return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
+}
+function fmtDateShort(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toLocaleDateString('en-AU', { day: '2-digit', month: 'short' });
+}
+function fmtDuration(ms) {
+  if (!ms || ms < 0) return '—';
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+}
+function toLocalDTInput(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  const pad = n => String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+function fromLocalDTInput(val) {
+  return val ? new Date(val).getTime() : null;
+}
+function toDateInput(ts) {
+  if (!ts) return '';
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+// Running timer display
+function fmtLive(startTs) {
+  const ms = Date.now() - startTs;
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  const s = Math.floor((ms % 60000) / 1000);
+  return h > 0
+    ? `${h}h ${String(m).padStart(2,'0')}m ${String(s).padStart(2,'0')}s`
+    : `${m}m ${String(s).padStart(2,'0')}s`;
+}
+
+// ── Toast ──────────────────────────────────────────────────────────────────
+function toast(msg, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = 'toast show' + (type ? ' '+type : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'toast'; }, 3000);
+}
+
+// ── Clock ──────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('headerClock').textContent =
+    now.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── Status cards ───────────────────────────────────────────────────────────
+function updateStatusCards() {
+  const shiftCard  = document.getElementById('shiftStatusCard');
+  const shiftVal   = document.getElementById('shiftStatusValue');
+  const shiftSub   = document.getElementById('shiftStatusSub');
+  const tripCard   = document.getElementById('tripStatusCard');
+  const tripVal    = document.getElementById('tripStatusValue');
+  const tripSub    = document.getElementById('tripStatusSub');
+
+  if (activeShift) {
+    shiftCard.className = 'status-card active';
+    shiftVal.innerHTML  = `<span class="pulse-dot"></span>${fmtLive(activeShift.start)}`;
+    shiftVal.className  = 'sc-value running';
+    shiftSub.textContent = `${activeShift.location} · In at ${fmt(activeShift.start)}`;
+  } else {
+    shiftCard.className  = 'status-card inactive';
+    shiftVal.className   = 'sc-value';
+    shiftVal.textContent = 'No active shift';
+    shiftSub.textContent = 'Clock in to begin';
+  }
+
+  if (activeTrip) {
+    tripCard.className  = 'status-card trip';
+    tripVal.innerHTML   = `<span class="pulse-dot blue"></span>${fmtLive(activeTrip.start)}`;
+    tripVal.className   = 'sc-value trip';
+    tripSub.textContent = `${activeTrip.from} → ${activeTrip.to}`;
+  } else {
+    tripCard.className   = 'status-card inactive';
+    tripVal.className    = 'sc-value';
+    tripVal.textContent  = 'No active trip';
+    tripSub.textContent  = 'Track mileage-claimable journeys';
+  }
+}
+setInterval(updateStatusCards, 1000);
+
+// ── Button states ──────────────────────────────────────────────────────────
+function syncButtons() {
+  document.getElementById('btnClockIn').disabled   = !!activeShift;
+  document.getElementById('btnClockOut').disabled  = !activeShift;
+  document.getElementById('btnTripStart').disabled = !!activeTrip;
+  document.getElementById('btnTripEnd').disabled   = !activeTrip;
+}
+
+// ── Clock In ───────────────────────────────────────────────────────────────
+document.getElementById('btnClockIn').addEventListener('click', () => {
+  const loc = document.getElementById('jobName').value.trim() || 'Unknown';
+  const overrideVal = document.getElementById('overrideStart').value;
+  const startTs = overrideVal ? fromLocalDTInput(overrideVal) : Date.now();
+  activeShift = { start: startTs, location: loc, notes: document.getElementById('shiftNotes').value.trim() };
+  document.getElementById('overrideStart').value = '';
+  syncButtons();
+  updateStatusCards();
+  toast(`Clocked in at ${fmt(startTs)}`);
+});
+
+// ── Clock Out ──────────────────────────────────────────────────────────────
+document.getElementById('btnClockOut').addEventListener('click', () => {
+  if (!activeShift) return;
+  const endTs = Date.now();
+  const rec = {
+    id:       uid(),
+    type:     'shift',
+    location: activeShift.location,
+    start:    activeShift.start,
+    end:      endTs,
+    duration: endTs - activeShift.start,
+    notes:    document.getElementById('shiftNotes').value.trim() || activeShift.notes,
+    km:       null,
+    claimable: false
+  };
+  records.unshift(rec);
+  save(records);
+  activeShift = null;
+  document.getElementById('shiftNotes').value = '';
+  syncButtons();
+  updateStatusCards();
+  renderLedger();
+  toast(`Clocked out · ${fmtDuration(rec.duration)}`);
+});
+
+// ── Trip Start ─────────────────────────────────────────────────────────────
+document.getElementById('btnTripStart').addEventListener('click', () => {
+  const from = document.getElementById('tripFrom').value.trim();
+  const to   = document.getElementById('tripTo').value.trim();
+  if (!from || !to) { toast('Enter From and To locations', 'warn'); return; }
+  activeTrip = {
+    start:  Date.now(),
+    from,
+    to,
+    km:     parseFloat(document.getElementById('tripKm').value) || null,
+    notes:  document.getElementById('tripNotes').value.trim()
+  };
+  syncButtons();
+  updateStatusCards();
+  toast(`Trip started: ${from} → ${to}`);
+});
+
+// ── Trip End ───────────────────────────────────────────────────────────────
+document.getElementById('btnTripEnd').addEventListener('click', () => {
+  if (!activeTrip) return;
+  const endTs = Date.now();
+  const kmVal = parseFloat(document.getElementById('tripKm').value) || activeTrip.km;
+  const rec = {
+    id:       uid(),
+    type:     'trip',
+    location: `${activeTrip.from} → ${activeTrip.to}`,
+    start:    activeTrip.start,
+    end:      endTs,
+    duration: endTs - activeTrip.start,
+    notes:    document.getElementById('tripNotes').value.trim() || activeTrip.notes,
+    km:       kmVal,
+    claimable: true
+  };
+  records.unshift(rec);
+  save(records);
+  activeTrip = null;
+  document.getElementById('tripFrom').value  = '';
+  document.getElementById('tripTo').value    = '';
+  document.getElementById('tripKm').value    = '';
+  document.getElementById('tripNotes').value = '';
+  syncButtons();
+  updateStatusCards();
+  renderLedger();
+  renderSummary();
+  toast(`Trip ended · ${fmtDuration(rec.duration)}${rec.km ? ' · ' + rec.km + ' km' : ''}`);
+});
+
+// ── Filters ────────────────────────────────────────────────────────────────
+function getFiltered() {
+  const from  = document.getElementById('filterFrom').value;
+  const to    = document.getElementById('filterTo').value;
+  const type  = document.getElementById('filterType').value;
+  const job   = document.getElementById('filterJob').value.toLowerCase();
+
+  return records.filter(r => {
+    if (type && r.type !== type) return false;
+    if (job  && !r.location.toLowerCase().includes(job)) return false;
+    if (from && toDateInput(r.start) < from) return false;
+    if (to   && toDateInput(r.start) > to)   return false;
+    return true;
+  });
+}
+
+['filterFrom','filterTo','filterType','filterJob'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderLedger);
+});
+
+// ── Ledger ─────────────────────────────────────────────────────────────────
+function renderLedger() {
+  const tbody = document.getElementById('ledgerBody');
+  const empty = document.getElementById('emptyState');
+  const rows  = getFiltered();
+
+  if (rows.length === 0) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    document.querySelector('.table-wrap').style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  document.querySelector('.table-wrap').style.display = '';
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>
+        <span class="badge badge-${r.type}">${r.type === 'shift' ? 'Shift' : 'Trip'}</span>
+      </td>
+      <td class="td-dim">${fmtDate(r.start)}</td>
+      <td class="td-main">${fmt(r.start)}</td>
+      <td>${fmt(r.end)}</td>
+      <td class="td-main">${fmtDuration(r.duration)}</td>
+      <td class="td-main" style="max-width:180px;overflow:hidden;text-overflow:ellipsis">${r.location}</td>
+      <td>${r.km != null ? r.km + ' km' : '<span class="td-dim">—</span>'}</td>
+      <td>${r.claimable ? '<span class="mileage-flag">★ CLAIM</span>' : '<span class="td-dim">—</span>'}</td>
+      <td class="td-dim" style="max-width:160px;overflow:hidden;text-overflow:ellipsis">${r.notes || '—'}</td>
+      <td>
+        <button class="del-btn" onclick="deleteRecord('${r.id}')" title="Delete">✕</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function deleteRecord(id) {
+  if (!confirm('Delete this record?')) return;
+  records = records.filter(r => r.id !== id);
+  save(records);
+  renderLedger();
+  renderSummary();
+  toast('Record deleted', 'warn');
+}
+
+// ── Clear All ──────────────────────────────────────────────────────────────
+document.getElementById('btnClearAll').addEventListener('click', () => {
+  if (!confirm('Delete ALL records? This cannot be undone.')) return;
+  records = [];
+  save(records);
+  renderLedger();
+  renderSummary();
+  toast('All records cleared', 'error');
+});
+
+// ── Export CSV ─────────────────────────────────────────────────────────────
+document.getElementById('btnExportCSV').addEventListener('click', () => {
+  const rows = getFiltered();
+  if (!rows.length) { toast('No records to export', 'warn'); return; }
+
+  const headers = ['Type','Date','Start','End','Duration_hrs','Location/Route','Distance_km','ATO_Claimable','Notes'];
+  const lines   = [headers.join(',')];
+
+  rows.forEach(r => {
+    const dur = r.duration ? (r.duration / 3600000).toFixed(2) : '';
+    const cells = [
+      r.type,
+      fmtDate(r.start),
+      fmt(r.start),
+      fmt(r.end),
+      dur,
+      `"${r.location.replace(/"/g,'""')}"`,
+      r.km != null ? r.km : '',
+      r.claimable ? 'Yes' : 'No',
+      `"${(r.notes||'').replace(/"/g,'""')}"`
+    ];
+    lines.push(cells.join(','));
+  });
+
+  // Summary rows
+  lines.push('');
+  lines.push('--- SUMMARY ---');
+  const shifts   = rows.filter(r => r.type === 'shift');
+  const trips    = rows.filter(r => r.type === 'trip');
+  const totalHrs = shifts.reduce((a,r) => a + (r.duration||0), 0) / 3600000;
+  const totalKm  = trips.reduce((a,r) => a + (r.km||0), 0);
+  lines.push(`Total Shift Hours,${totalHrs.toFixed(2)}`);
+  lines.push(`Total Shifts,${shifts.length}`);
+  lines.push(`Total Trips,${trips.length}`);
+  lines.push(`Total Claimable km,${totalKm.toFixed(1)}`);
+  lines.push(`Export Date,${new Date().toLocaleDateString('en-AU')}`);
+
+  const blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `shifts_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  toast(`Exported ${rows.length} records`);
+});
+
+// ── Summary ────────────────────────────────────────────────────────────────
+['sumFrom','sumTo'].forEach(id => {
+  document.getElementById(id).addEventListener('input', renderSummary);
+});
+
+function renderSummary() {
+  const from = document.getElementById('sumFrom').value;
+  const to   = document.getElementById('sumTo').value;
+
+  let subset = records.filter(r => {
+    if (from && toDateInput(r.start) < from) return false;
+    if (to   && toDateInput(r.start) > to)   return false;
+    return true;
+  });
+
+  const shifts     = subset.filter(r => r.type === 'shift');
+  const trips      = subset.filter(r => r.type === 'trip');
+  const totalMs    = shifts.reduce((a,r) => a + (r.duration||0), 0);
+  const totalKm    = trips.reduce((a,r) => a + (r.km||0), 0);
+  const claimTrips = trips.filter(r => r.claimable).length;
+
+  // ATO cents-per-km rate (2024-25: 88c/km)
+  const ATO_RATE  = 0.88;
+  const claimAmt  = totalKm * ATO_RATE;
+
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="sum-card">
+      <div class="sum-label">Total Hours</div>
+      <div class="sum-val">${(totalMs/3600000).toFixed(1)}</div>
+      <div class="sum-sub">${shifts.length} shift${shifts.length !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Avg Shift Length</div>
+      <div class="sum-val">${shifts.length ? fmtDuration(totalMs / shifts.length) : '—'}</div>
+      <div class="sum-sub">per shift</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Inter-Job km</div>
+      <div class="sum-val">${totalKm.toFixed(1)}</div>
+      <div class="sum-sub">${claimTrips} claimable trip${claimTrips !== 1 ? 's' : ''}</div>
+    </div>
+    <div class="sum-card">
+      <div class="sum-label">Est. ATO Claim</div>
+      <div class="sum-val">$${claimAmt.toFixed(2)}</div>
+      <div class="sum-sub">@ 88¢/km (2024–25)</div>
+    </div>
+  `;
+
+  // Per-employer breakdown
+  const byLocation = {};
+  shifts.forEach(r => {
+    if (!byLocation[r.location]) byLocation[r.location] = { ms: 0, count: 0 };
+    byLocation[r.location].ms    += r.duration || 0;
+    byLocation[r.location].count += 1;
+  });
+
+  const locRows = Object.entries(byLocation).sort((a,b) => b[1].ms - a[1].ms);
+  if (!locRows.length) { document.getElementById('summaryTable').innerHTML = ''; return; }
+
+  document.getElementById('summaryTable').innerHTML = `
+    <div class="ledger-title" style="margin-bottom:12px">By Employer / Location</div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>Employer / Location</th>
+          <th>Shifts</th>
+          <th>Total Hours</th>
+          <th>Avg Shift</th>
+        </tr></thead>
+        <tbody>
+          ${locRows.map(([loc, d]) => `
+            <tr>
+              <td class="td-main">${loc}</td>
+              <td>${d.count}</td>
+              <td class="td-main">${(d.ms/3600000).toFixed(1)} h</td>
+              <td>${fmtDuration(d.ms/d.count)}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}
+
+// ── Tabs ───────────────────────────────────────────────────────────────────
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
+    if (tab.dataset.tab === 'summary') renderSummary();
+  });
+});
+
+// ── Init ───────────────────────────────────────────────────────────────────
+syncButtons();
+updateStatusCards();
+renderLedger();
+</script>
+</body>
+</html>
