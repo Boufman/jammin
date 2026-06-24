@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>From Awareness to Action — Corruption &amp; Ethics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#181C22;
+    --ink-2:#222731;
+    --parchment:#ECE4D0;
+    --parchment-2:#E2D8BE;
+    --brass:#A8793B;
+    --brass-light:#C99A55;
+    --rust:#7C2D26;
+    --moss:#4C6B4F;
+    --bone:#F6F1E4;
+    --line:rgba(246,241,228,0.14);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--ink);
+    color:var(--bone);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  .app{
+    max-width:1040px;
+    margin:0 auto;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  /* Header */
+  .topbar{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:18px 24px;
+    border-bottom:1px solid var(--line);
+  }
+  .topbar-left{display:flex;align-items:center;gap:14px;}
+  .menu-btn{
+    width:36px;height:36px;border-radius:6px;border:1px solid var(--line);
+    background:var(--ink-2);color:var(--bone);cursor:pointer;
+    display:flex;align-items:center;justify-content:center;font-size:16px;
+  }
+  .menu-btn:focus-visible, .nav-arrow:focus-visible, .opt-card:focus-visible, button:focus-visible, .reveal-card:focus-visible{
+    outline:2px solid var(--brass-light); outline-offset:2px;
+  }
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:.12em;text-transform:uppercase;
+    color:var(--brass-light);
+  }
+  .progress-count{
+    font-family:'JetBrains Mono',monospace;
+    font-size:12px;color:rgba(246,241,228,0.55);
+  }
+  /* Side nav overlay */
+  .nav-overlay{
+    position:fixed;inset:0;background:rgba(12,14,18,0.78);
+    display:none;z-index:50;
+  }
+  .nav-overlay.open{display:flex;}
+  .nav-panel{
+    background:var(--ink-2);width:320px;max-width:86vw;height:100%;
+    padding:24px;overflow-y:auto;border-right:1px solid var(--line);
+  }
+  .nav-panel h3{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--brass-light);margin:0 0 16px;
+  }
+  .nav-item{
+    display:flex;gap:10px;align-items:flex-start;
+    padding:10px 8px;border-radius:6px;cursor:pointer;font-size:13.5px;
+    color:rgba(246,241,228,0.85);line-height:1.4;
+  }
+  .nav-item:hover{background:rgba(168,121,59,0.14);}
+  .nav-item.current{background:rgba(168,121,59,0.22);color:var(--bone);}
+  .nav-dot{
+    width:6px;height:6px;border-radius:50%;background:var(--brass);
+    margin-top:6px;flex-shrink:0;
+  }
+  .nav-dot.done{background:var(--moss);}
+  /* Main stage */
+  .stage{
+    flex:1;display:flex;align-items:center;justify-content:center;
+    padding:36px 24px 28px;
+  }
+  .card{
+    background:var(--parchment);color:#221C12;
+    border-radius:14px;
+    width:100%;
+    max-width:760px;
+    padding:44px 48px;
+    min-height:420px;
+    box-shadow:0 30px 60px -20px rgba(0,0,0,0.55);
+    position:relative;
+    overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;top:0;left:0;right:0;height:5px;
+    background:linear-gradient(90deg,var(--brass) 0%, var(--moss) 100%);
+  }
+  h1.title{
+    font-family:'Fraunces',serif;font-weight:600;
+    font-size:34px;line-height:1.12;margin:0 0 6px;
+    color:#1c1812;
+  }
+  h2.sub{
+    font-family:'Fraunces',serif;font-weight:600;
+    font-size:25px;margin:0 0 18px;color:#1c1812;
+  }
+  .deck-eyebrow{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--rust);margin-bottom:10px;font-weight:700;
+  }
+  .lede{font-size:15.5px;line-height:1.6;color:#3a3326;margin:0 0 18px;}
+  ul.bullets{margin:0 0 6px;padding-left:0;list-style:none;}
+  ul.bullets li{
+    position:relative;padding-left:22px;margin-bottom:11px;
+    font-size:15px;line-height:1.55;color:#2b2519;
+  }
+  ul.bullets li::before{
+    content:"";position:absolute;left:0;top:8px;width:8px;height:8px;
+    background:var(--brass);border-radius:50%;
+  }
+  ul.bullets li.bad::before{background:var(--rust);}
+  ul.bullets li.good::before{background:var(--moss);}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:26px;margin-top:6px;}
+  @media (max-width:640px){.two-col{grid-template-columns:1fr;}}
+  .col-label{
+    font-family:'JetBrains Mono',monospace;font-size:11px;letter-spacing:.08em;
+    text-transform:uppercase;font-weight:700;margin-bottom:10px;
+  }
+  .col-label.good{color:var(--moss);}
+  .col-label.bad{color:var(--rust);}
+  /* Case file stamp */
+  .stamp{
+    position:absolute;top:30px;right:38px;
+    width:96px;height:96px;border-radius:50%;
+    border:3px double var(--rust);
+    transform:rotate(-9deg);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    color:var(--rust);font-family:'JetBrains Mono',monospace;
+    text-align:center;line-height:1.15;opacity:.85;
+  }
+  .stamp .small{font-size:8px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;}
+  .stamp .num{font-size:20px;font-weight:700;margin-top:2px;}
+  .case-quote{
+    background:var(--bone);border:1px solid #d9cfb2;border-radius:10px;
+    padding:18px 20px;margin:8px 0 22px;font-size:15px;line-height:1.55;
+    color:#2b2519;
+  }
+  .case-quote b{color:var(--ink);}
+  .reveal-grid{display:flex;flex-direction:column;gap:10px;margin-top:4px;}
+  .reveal-card{
+    border:1px solid #d9cfb2;border-radius:10px;background:rgba(255,255,255,0.4);
+    cursor:pointer;overflow:hidden;
+  }
+  .reveal-q{
+    padding:13px 16px;font-size:14.5px;font-weight:600;color:#1c1812;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .reveal-q .letter{
+    font-family:'JetBrains Mono',monospace;color:var(--brass);font-weight:700;margin-right:8px;
+  }
+  .reveal-toggle{font-size:12px;color:var(--brass);font-family:'JetBrains Mono',monospace;flex-shrink:0;}
+  .reveal-answer{
+    display:none;padding:0 16px 15px 38px;font-size:14px;line-height:1.55;color:#3a3326;
+  }
+  .reveal-card.open .reveal-answer{display:block;}
+  .reveal-card.open{background:rgba(76,107,79,0.10);border-color:var(--moss);}
+  /* quiz */
+  .q-block{margin-bottom:26px;}
+  .q-num{
+    font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--brass);
+    font-weight:700;letter-spacing:.05em;margin-bottom:6px;
+  }
+  .q-text{font-size:15.5px;font-weight:600;color:#1c1812;margin-bottom:10px;line-height:1.45;}
+  .opt-card{
+    display:flex;align-items:center;gap:11px;
+    border:1.5px solid #d9cfb2;border-radius:9px;padding:11px 14px;margin-bottom:8px;
+    cursor:pointer;font-size:14.5px;color:#241f15;background:rgba(255,255,255,0.35);
+    transition:border-color .12s,background .12s;
+  }
+  .opt-card:hover{border-color:var(--brass);}
+  .opt-card input{accent-color:var(--brass);width:15px;height:15px;flex-shrink:0;}
+  .opt-card.correct{border-color:var(--moss);background:rgba(76,107,79,0.14);}
+  .opt-card.incorrect{border-color:var(--rust);background:rgba(124,45,38,0.12);}
+  .opt-card.locked{cursor:default;}
+  .quiz-footer{display:flex;justify-content:flex-end;margin-top:10px;}
+  /* buttons */
+  .btn{
+    font-family:'Inter',sans-serif;font-weight:600;font-size:14.5px;
+    border:none;border-radius:8px;padding:12px 26px;cursor:pointer;
+    background:var(--brass);color:#221704;
+    transition:transform .08s, background .12s;
+  }
+  .btn:hover{background:var(--brass-light);}
+  .btn:active{transform:scale(0.97);}
+  .btn.ghost{background:transparent;border:1.5px solid var(--ink-2);color:var(--bone);}
+  /* nav arrows */
+  .footerbar{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:6px 24px 26px;
+  }
+  .nav-arrow{
+    width:42px;height:42px;border-radius:50%;border:1px solid var(--line);
+    background:var(--ink-2);color:var(--bone);font-size:18px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .nav-arrow:disabled{opacity:0.3;cursor:not-allowed;}
+  .dots{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:60%;}
+  .dot{width:7px;height:7px;border-radius:50%;background:rgba(246,241,228,0.22);}
+  .dot.active{background:var(--brass);width:9px;height:9px;}
+  .dot.done{background:var(--moss);}
+  /* results */
+  .result-wrap{text-align:center;padding-top:8px;}
+  .result-seal{
+    width:120px;height:120px;border-radius:50%;border:3px double var(--moss);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 18px;
+    color:var(--moss);
+  }
+  .result-seal.fail{border-color:var(--rust);color:var(--rust);}
+  .result-score{font-family:'Fraunces',serif;font-size:38px;font-weight:600;color:#1c1812;margin:0 0 6px;}
+  .result-list{text-align:left;max-width:520px;margin:24px auto 0;}
+  .result-row{
+    display:flex;justify-content:space-between;gap:12px;font-size:13.5px;
+    padding:8px 0;border-bottom:1px solid #d9cfb2;color:#3a3326;
+  }
+  .result-row b{color:#1c1812;}
+  .tag{font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;}
+  .tag.ok{background:rgba(76,107,79,0.18);color:var(--moss);}
+  .tag.no{background:rgba(124,45,38,0.16);color:var(--rust);}
+  @media (max-width:640px){
+    .card{padding:30px 22px;}
+    h1.title{font-size:27px;}
+    h2.sub{font-size:21px;}
+    .stamp{width:74px;height:74px;top:20px;right:20px;}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <button class="menu-btn" id="menuBtn" aria-label="Open section list">☰</button>
+      <span class="eyebrow">From Awareness to Action: Corruption &amp; Ethics</span>
+    </div>
+    <span class="progress-count" id="progressCount">1 / 1</span>
+  </div>
+
+  <div class="stage">
+    <div class="card" id="card"></div>
+  </div>
+
+  <div class="footerbar">
+    <button class="nav-arrow" id="prevBtn" aria-label="Previous">‹</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav-arrow" id="nextBtn" aria-label="Next">›</button>
+  </div>
+</div>
+
+<div class="nav-overlay" id="navOverlay">
+  <div class="nav-panel">
+    <h3>Sections</h3>
+    <div id="navList"></div>
+  </div>
+</div>
+
+<script>
+/* ---------- Content data ---------- */
+
+const contentSlides = [
+  {
+    type:'title',
+    eyebrow:'COURSE',
+    title:'From Awareness to Action',
+    sub:'Corruption and Ethics',
+    body:`<p class="lede">Many people can define corruption, criticise it, and spot it in everyday situations. But awareness alone does not stop it. The real challenge — and the subject of this course — is moving from <b>knowing</b> to <b>doing</b>: from awareness to ethical action.</p>`,
+    nav:'Introduction'
+  },
+  {
+    type:'content', nav:'Awareness',
+    eyebrow:'KEY CONCEPT — A', title:'Awareness',
+    bullets:[
+      'Understanding what corruption is — e.g. bribery, nepotism, abuse of office.',
+      'Recognising its impact — economic loss, inequality, poor service delivery.',
+      'Knowing the ethical standards and rules that apply.',
+      'That said: awareness does not automatically lead to ethical behaviour.'
+    ]
+  },
+  {
+    type:'content', nav:'Action',
+    eyebrow:'KEY CONCEPT — B', title:'Action',
+    bullets:[
+      'Making decisions that uphold integrity.',
+      'Refusing to participate in corrupt practices.',
+      'Reporting wrongdoing where possible.',
+      'Promoting ethical practices in one\u2019s environment.'
+    ]
+  },
+  {
+    type:'content', nav:'The Awareness-Action Gap',
+    eyebrow:'KEY CONCEPT — C', title:'The Awareness-Action Gap',
+    lede:'This is the gap between what people know is right, and what they actually do. Common reasons for the gap:',
+    bullets:[
+      'Fear of consequences — e.g. losing a job, retaliation.',
+      'Social pressure — \u201ceveryone does it.\u201d',
+      'Personal benefit — financial gain, convenience.',
+      'Weak systems — lack of enforcement.',
+      'Moral justification — \u201cit\u2019s a small thing.\u201d'
+    ]
+  },
+  {
+    type:'content', nav:'Personal Responsibility & Framework',
+    eyebrow:'MOVING FROM AWARENESS TO ACTION — A/B', title:'Personal Responsibility',
+    lede:'Ethics begins with personal choices. Avoid shifting blame to \u201cthe system\u201d — ask instead: \u201cWhat can I do differently?\u201d',
+    bullets:[
+      '<b>Ethical decision-making — ask yourself:</b>',
+      'Is it legal?',
+      'Is this fair?',
+      'Would I be comfortable if this was made public?',
+      'Who is affected by this decision?'
+    ]
+  },
+  {
+    type:'content', nav:'Moral Courage & Strategies',
+    eyebrow:'MOVING FROM AWARENESS TO ACTION — C/D', title:'Building Moral Courage',
+    lede:'Moral courage means acting ethically despite risk or pressure — saying \u201cno\u201d to bribes or unethical requests, and speaking up when something is wrong.',
+    bullets:[
+      '<b>Practical strategies:</b>',
+      'Refuse and explain your stance politely.',
+      'Seek support from colleagues or supervisors.',
+      'Use formal reporting channels if safe to do so.',
+      'Document incidents where possible.'
+    ]
+  },
+  {
+    type:'twocol', nav:'Creating Ethical Environments',
+    eyebrow:'MOVING FROM AWARENESS TO ACTION — E', title:'Creating Ethical Environments',
+    colA:{label:'Organisations should', items:[
+      'Encourage transparency',
+      'Reward integrity',
+      'Have leadership model ethical behaviour',
+      'Establish clear consequences for corruption'
+    ]},
+    colB:{label:'Without this, corruption', items:[
+      'Goes unchallenged and unreported',
+      'Becomes normalised over time',
+      'Spreads as others follow the example set',
+      'Erodes trust at every level'
+    ]}
+  },
+  {
+    type:'content', nav:'Barriers to Ethical Action',
+    eyebrow:'BARRIERS', title:'Barriers to Ethical Action',
+    bullets:[
+      'Normalisation of corruption.',
+      'Lack of trust in reporting systems.',
+      'Economic hardship.',
+      'Power imbalances.',
+      'Cultural expectations — e.g. obligation to help relatives.'
+    ]
+  },
+];
+
+const caseStudies = [
+  {
+    num:'01', nav:'Case Study 1: The "Small Token"',
+    title:'The "Small Token"',
+    quote:'You are a clerk in a government office. A client offers you a small amount of money to \u201cspeed up\u201d their paperwork.',
+    questions:[
+      {q:'Is this corruption? Why or why not?', a:'Yes. The amount is irrelevant \u2014 it\u2019s an inducement for preferential treatment outside the normal process, which is the core of bribery.'},
+      {q:'What are the possible consequences of accepting it?', a:'Disciplinary action or dismissal, legal liability, loss of trust, and it normalises the practice for colleagues and future clients.'},
+      {q:'What would you do in this situation?', a:'Decline, and process the paperwork through the normal channel and timeframe \u2014 the same way for every client.'},
+      {q:'How can you refuse without creating conflict?', a:'Frame it around fairness rather than accusation: \u201cI want your application handled the same way everyone else\u2019s is \u2014 I\u2019ll get it moving through the normal process.\u201d'}
+    ]
+  },
+  {
+    num:'02', nav:'Case Study 2: Pressure from Above',
+    title:'Pressure from Above',
+    quote:'Your supervisor asks you to approve a payment that you know is irregular. When you hesitate, they say, \u201cThis is how things are done here.\u201d',
+    questions:[
+      {q:'What ethical dilemma are you facing?', a:'Loyalty and job security versus personal integrity and legal compliance.'},
+      {q:'What risks are involved in refusing?', a:'Possible retaliation, being sidelined, or strained working relationships \u2014 weighed against the legal and professional risk of approving an irregular payment.'},
+      {q:'What options do you have?', a:'Ask for the instruction in writing, raise the concern privately with your supervisor, escalate through compliance or a more senior officer, and document the conversation.'},
+      {q:'How would you balance job security and integrity?', a:'Treat integrity as the longer-term protection \u2014 documenting your concerns and using proper channels protects you even if it creates short-term friction.'}
+    ]
+  },
+  {
+    num:'03', nav:'Case Study 3: Helping Family',
+    title:'Helping Family',
+    quote:'A relative asks you to help them get a job in your organisation, even though they are not qualified.',
+    questions:[
+      {q:'Is this an example of corruption or something else?', a:'It\u2019s nepotism \u2014 a form of corruption when it overrides merit-based selection, even though it can feel like ordinary family obligation rather than a bribe.'},
+      {q:'What are the long-term effects of such actions?', a:'Erodes trust in the organisation, risks performance or safety problems from an unqualified hire, and sets a precedent that invites further favouritism.'},
+      {q:'How can you respond while maintaining the relationship?', a:'Explain the formal process honestly, and offer to help them prepare a genuinely strong application rather than bypassing the process.'},
+      {q:'What principle should guide your decision?', a:'Fairness and merit should guide hiring decisions, not personal relationships.'}
+    ]
+  },
+  {
+    num:'04', nav:'Case Study 4: Silence vs Speaking Up',
+    title:'Silence vs Speaking Up',
+    quote:'You notice a colleague regularly misusing company funds. Others are aware but say nothing.',
+    questions:[
+      {q:'Why might people choose to remain silent?', a:'Fear of retaliation, social pressure against being seen as a \u201csnitch,\u201d and doubt that reporting will actually lead to action.'},
+      {q:'What are the consequences of silence?', a:'The behaviour continues and often escalates, losses grow, and silent colleagues can come to be seen as complicit.'},
+      {q:'What would you do in this situation?', a:'Document specific instances and raise them through a formal reporting channel or a trusted supervisor.'},
+      {q:'What factors would influence your decision?', a:'Trust in the reporting system, protection for whistleblowers, the perceived severity of the misuse, and your relationship with the colleague.'}
+    ]
+  }
+];
+
+const quizQuestions = [
+  {q:'The awareness-action gap refers to:', opts:['Lack of education','Difference between knowing and doing','Legal loopholes','Cultural diversity'], correct:1},
+  {q:'Which of the following is NOT a reason people fail to act ethically?', opts:['Fear of consequences','Social pressures','Strong enforcement systems','Personal benefit'], correct:2},
+  {q:'Moral courage means:', opts:['Avoiding difficult situations','Acting ethically despite risks','Following orders without question','Ignoring corruption'], correct:1},
+  {q:'What is political patronage?', opts:['Hiring based on qualifications','Hiring based on connections','Public elections','Legal enforcement'], correct:1},
+  {q:'Why does a low salary contribute to corruption?', opts:['It makes people more educated','It removes incentives for wrongdoing','It increases financial pressure and temptation','It strengthens accountability'], correct:2},
+  {q:'What is the key feature of a corrupt system?', opts:['Strong oversight','High transparency','Hidden processes','Equal opportunities'], correct:2},
+  {q:'Which system encourages nepotism?', opts:['Transparent recruitment','Merit-based hiring','Patronage systems','Strong legal enforcement'], correct:2},
+  {q:'What happens when corruption becomes normalised?', opts:['People resist it more','People accept it as normal','Laws become stronger','Transparency increases'], correct:1},
+  {q:'Why might people remain silent about corruption?', opts:['Strong protection systems','Fear of consequences','High transparency','Quick justice'], correct:1},
+  {q:'Which of the following best describes a system that unintentionally encourages corruption?', opts:['A system with clear rules and strict enforcement','A system where procedures are simple and transparent','A system where delays and discretion allow officials to demand informal payments','A system with high levels of accountability'], correct:2}
+];
+
+/* ---------- Build full deck ---------- */
+const deck = [];
+contentSlides.forEach(s=>deck.push(s));
+caseStudies.forEach(c=>deck.push({type:'case', data:c, nav:c.nav}));
+deck.push({type:'quizIntro', nav:'Final Quiz'});
+deck.push({type:'quiz', nav:'Final Quiz — Questions'});
+deck.push({type:'results', nav:'Results'});
+
+let current = 0;
+let quizAnswers = new Array(quizQuestions.length).fill(null);
+let quizSubmitted = false;
+const visited = new Array(deck.length).fill(false);
+
+const cardEl = document.getElementById('card');
+const dotsEl = document.getElementById('dots');
+const progressCount = document.getElementById('progressCount');
+const prevBtn = document.getElementById('prevBtn');
+const nextBtn = document.getElementById('nextBtn');
+
+function bulletsHtml(items){
+  return '<ul class="bullets">'+items.map(i=>'<li>'+i+'</li>').join('')+'</ul>';
+}
+
+function render(){
+  visited[current]=true;
+  const s = deck[current];
+  let html = '';
+
+  if(s.type==='title'){
+    html = `<div class="deck-eyebrow">${s.eyebrow}</div>
+      <h1 class="title">${s.title}</h1>
+      <h2 class="sub" style="font-size:18px;color:#6b5f44;margin-top:2px;">${s.sub}</h2>
+      ${s.body}
+      <button class="btn" id="beginBtn" style="margin-top:14px;">Begin course</button>`;
+  } else if(s.type==='content'){
+    html = `<div class="deck-eyebrow">${s.eyebrow}</div>
+      <h1 class="title">${s.title}</h1>
+      ${s.lede?`<p class="lede">${s.lede}</p>`:''}
+      ${bulletsHtml(s.bullets)}`;
+  } else if(s.type==='twocol'){
+    html = `<div class="deck-eyebrow">${s.eyebrow}</div>
+      <h1 class="title">${s.title}</h1>
+      <div class="two-col">
+        <div>
+          <div class="col-label good">${s.colA.label}</div>
+          ${bulletsHtml(s.colA.items.map(i=>i))}
+        </div>
+        <div>
+          <div class="col-label bad">${s.colB.label}</div>
+          ${bulletsHtml(s.colB.items.map(i=>i))}
+        </div>
+      </div>`;
+    // mark good/bad bullet colors
+  } else if(s.type==='case'){
+    const c = s.data;
+    html = `<div class="stamp"><span class="small">Case File</span><span class="num">${c.num}</span></div>
+      <div class="deck-eyebrow">CASE STUDY ${c.num}</div>
+      <h1 class="title" style="max-width:80%;">${c.title}</h1>
+      <div class="case-quote">${c.quote}</div>
+      <div class="reveal-grid">
+        ${c.questions.map((qa,i)=>`
+          <div class="reveal-card" tabindex="0" data-idx="${i}">
+            <div class="reveal-q"><span><span class="letter">${String.fromCharCode(97+i)}.</span>${qa.q}</span><span class="reveal-toggle">Reflect</span></div>
+            <div class="reveal-answer">${qa.a}</div>
+          </div>`).join('')}
+      </div>`;
+  } else if(s.type==='quizIntro'){
+    html = `<div class="deck-eyebrow">FINAL QUIZ</div>
+      <h1 class="title">Ready to test what you know?</h1>
+      <p class="lede">10 questions, covering everything from this course. You'll see your score and a full review at the end.</p>
+      <button class="btn" id="startQuizBtn">Start quiz</button>`;
+  } else if(s.type==='quiz'){
+    html = `<div class="deck-eyebrow">FINAL QUIZ</div>
+      <h1 class="title" style="margin-bottom:18px;">Answer all 10 questions</h1>
+      ${quizQuestions.map((qq,qi)=>`
+        <div class="q-block">
+          <div class="q-num">QUESTION ${qi+1} / ${quizQuestions.length}</div>
+          <div class="q-text">${qq.q}</div>
+          ${qq.opts.map((opt,oi)=>{
+            let cls='opt-card';
+            if(quizSubmitted){
+              cls+=' locked';
+              if(oi===qq.correct) cls+=' correct';
+              else if(quizAnswers[qi]===oi) cls+=' incorrect';
+            }
+            const checked = quizAnswers[qi]===oi ? 'checked' : '';
+            return `<label class="${cls}">
+              <input type="radio" name="q${qi}" value="${oi}" ${checked} ${quizSubmitted?'disabled':''} onchange="setAnswer(${qi},${oi})">
+              ${opt}
+            </label>`;
+          }).join('')}
+        </div>`).join('')}
+      <div class="quiz-footer">
+        ${quizSubmitted
+          ? `<button class="btn" id="seeResultsBtn">See results</button>`
+          : `<button class="btn" id="submitQuizBtn" ${quizAnswers.includes(null)?'disabled':''}>Submit quiz</button>`}
+      </div>`;
+  } else if(s.type==='results'){
+    const correctCount = quizQuestions.reduce((acc,qq,i)=>acc+(quizAnswers[i]===qq.correct?1:0),0);
+    const pct = Math.round((correctCount/quizQuestions.length)*100);
+    const passed = pct>=70;
+    html = `<div class="result-wrap">
+      <div class="deck-eyebrow" style="text-align:center;">FINAL QUIZ — RESULT</div>
+      <div class="result-seal ${passed?'':'fail'}">
+        ${passed
+          ? `<svg width="46" height="46" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>`
+          : `<span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;">RETRY</span>`}
+      </div>
+      <p class="result-score">${correctCount} / ${quizQuestions.length} correct</p>
+      <p class="lede" style="text-align:center;">${passed? 'Well done \u2014 you\u2019ve shown a solid grasp of moving from awareness to ethical action.' : 'A few gaps to close. Review the answers below, then try again.'}</p>
+      <div class="result-list">
+        ${quizQuestions.map((qq,i)=>{
+          const ok = quizAnswers[i]===qq.correct;
+          return `<div class="result-row">
+            <span><b>Q${i+1}.</b> ${qq.q}</span>
+            <span class="tag ${ok?'ok':'no'}">${ok?'CORRECT':'REVIEW'}</span>
+          </div>`;
+        }).join('')}
+      </div>
+      ${!passed?`<button class="btn" id="retakeBtn" style="margin-top:22px;">Retake quiz</button>`:''}
+    </div>`;
+  }
+
+  cardEl.innerHTML = html;
+
+  // wire up dynamic buttons
+  const beginBtn = document.getElementById('beginBtn');
+  if(beginBtn) beginBtn.onclick = ()=>goTo(current+1);
+  const startQuizBtn = document.getElementById('startQuizBtn');
+  if(startQuizBtn) startQuizBtn.onclick = ()=>goTo(current+1);
+  const submitQuizBtn = document.getElementById('submitQuizBtn');
+  if(submitQuizBtn) submitQuizBtn.onclick = ()=>{ quizSubmitted=true; render(); };
+  const seeResultsBtn = document.getElementById('seeResultsBtn');
+  if(seeResultsBtn) seeResultsBtn.onclick = ()=>goTo(current+1);
+  const retakeBtn = document.getElementById('retakeBtn');
+  if(retakeBtn) retakeBtn.onclick = ()=>{
+    quizSubmitted=false; quizAnswers=new Array(quizQuestions.length).fill(null);
+    goTo(deck.findIndex(d=>d.type==='quiz'));
+  };
+
+  document.querySelectorAll('.reveal-card').forEach(card=>{
+    card.addEventListener('click', ()=>card.classList.toggle('open'));
+    card.addEventListener('keypress', e=>{ if(e.key==='Enter') card.classList.toggle('open'); });
+  });
+
+  updateChrome();
+}
+
+function setAnswer(qi,oi){
+  quizAnswers[qi]=oi;
+  const btn = document.getElementById('submitQuizBtn');
+  if(btn) btn.disabled = quizAnswers.includes(null);
+}
+window.setAnswer = setAnswer;
+
+function updateChrome(){
+  progressCount.textContent = (current+1)+' / '+deck.length;
+  prevBtn.disabled = current===0;
+  nextBtn.disabled = current===deck.length-1 || (deck[current].type==='quiz' && !quizSubmitted) ;
+  // dots: condensed (group case studies + quiz visually but show all)
+  dotsEl.innerHTML = deck.map((d,i)=>{
+    let cls='dot';
+    if(i===current) cls+=' active';
+    else if(visited[i]) cls+=' done';
+    return `<span class="${cls}"></span>`;
+  }).join('');
+  renderNavList();
+}
+
+function goTo(i){
+  if(i<0||i>=deck.length) return;
+  current=i;
+  render();
+  document.getElementById('navOverlay').classList.remove('open');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+prevBtn.onclick = ()=>goTo(current-1);
+nextBtn.onclick = ()=>goTo(current+1);
+
+document.getElementById('menuBtn').onclick = ()=>{
+  document.getElementById('navOverlay').classList.add('open');
+};
+document.getElementById('navOverlay').onclick = (e)=>{
+  if(e.target.id==='navOverlay') e.currentTarget.classList.remove('open');
+};
+
+function renderNavList(){
+  const list = document.getElementById('navList');
+  list.innerHTML = deck.map((d,i)=>{
+    let dotCls = 'nav-dot';
+    if(visited[i]) dotCls+=' done';
+    return `<div class="nav-item ${i===current?'current':''}" data-i="${i}">
+      <span class="${dotCls}"></span><span>${d.nav}</span>
+    </div>`;
+  }).join('');
+  list.querySelectorAll('.nav-item').forEach(item=>{
+    item.onclick = ()=>goTo(parseInt(item.dataset.i));
+  });
+}
+
+render();
+</script>
+</body>
+</html>
