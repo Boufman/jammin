@@ -222,9 +222,29 @@ border-top:1px solid var(–line); padding-top:14px;
 
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.12.1/dist/JsBarcode.all.min.js"></script>
+
+<script>
+  // If either library failed to load (network/CDN block), surface it clearly instead of
+  // failing silently later when the user taps a button.
+  window.addEventListener('load', function(){
+    const missing = [];
+    if(typeof Tesseract === 'undefined') missing.push('Tesseract.js (OCR)');
+    if(typeof JsBarcode === 'undefined') missing.push('JsBarcode (barcode rendering)');
+    if(missing.length){
+      const statusEl = document.getElementById('statusText');
+      if(statusEl) statusEl.textContent = 'library load failed';
+      const rawEl = document.getElementById('rawText');
+      if(rawEl){
+        rawEl.classList.add('show');
+        rawEl.textContent = 'Failed to load: ' + missing.join(', ') +
+          '.\nCheck your internet connection, or that these CDN domains aren\'t blocked: cdn.jsdelivr.net';
+      }
+    }
+  });
+</script>
 
 <script>
 (function(){
