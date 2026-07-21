@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Part/Batch → Barcode</title>
+<style>
+  :root{
+    --bg: #0b0d0f;
+    --panel: #16191c;
+    --panel-2: #1e2226;
+    --line: #2a2f34;
+    --text: #e8ebed;
+    --text-dim: #8b939a;
+    --accent: #ff8c3a;
+    --accent-dim: #8a4d20;
+    --good: #4caf7d;
+    --mono: "SF Mono", "Roboto Mono", "Consolas", monospace;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+  html,body{
+    margin:0; padding:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    height:100%; overflow-x:hidden;
+  }
+  #app{
+    max-width:520px; margin:0 auto; min-height:100vh;
+    display:flex; flex-direction:column;
+    padding:14px 14px calc(24px + env(safe-area-inset-bottom));
+  }
+  header{
+    display:flex; align-items:baseline; justify-content:space-between;
+    padding:6px 2px 14px;
+  }
+  header h1{
+    font-size:15px; font-weight:600; letter-spacing:0.02em; margin:0;
+    color:var(--text-dim); text-transform:uppercase;
+  }
+  header .status{ font-size:12px; color:var(--text-dim); font-family:var(--mono); }
+
+.camera-wrap{
+position:relative; width:100%; aspect-ratio: 4/3;
+background:#000; border-radius:10px; overflow:hidden;
+border:1px solid var(–line);
+}
+#video{ width:100%; height:100%; object-fit:cover; display:block; }
+#captureCanvas{ display:none; }
+
+.scan-frame{
+position:absolute; inset:18% 8%; border:2px solid var(–accent);
+border-radius:6px; opacity:0.85; pointer-events:none;
+box-shadow: 0 0 0 1000px rgba(0,0,0,0.35);
+}
+.scan-frame::before{
+content:“Fill this with part / batch text”; position:absolute; top:-22px; left:0;
+font-size:11px; color:var(–accent); font-family:var(–mono);
+}
+
+.shutter-row{
+display:flex; align-items:center; justify-content:center; gap:18px;
+padding:16px 0 8px;
+}
+.shutter{
+width:70px; height:70px; border-radius:50%;
+background:var(–accent); border:4px solid #3a2412;
+display:flex; align-items:center; justify-content:center;
+color:#1a0f05; font-size:26px; font-weight:700;
+}
+.shutter:active{ transform:scale(0.94); }
+button{ font-family:inherit; cursor:pointer; }
+.switch-cam{
+width:44px; height:44px; border-radius:50%; background:var(–panel-2);
+border:1px solid var(–line); color:var(–text); font-size:18px;
+display:flex; align-items:center; justify-content:center;
+}
+
+.ocr-progress{
+height:3px; background:var(–panel-2); border-radius:2px; overflow:hidden; margin-top:8px;
+display:none;
+}
+.ocr-progress.active{ display:block; }
+.ocr-progress > div{ height:100%; background:var(–accent); width:0%; transition:width 0.15s; }
+
+.raw-text{
+margin-top:10px; font-family:var(–mono); font-size:12px; color:var(–text-dim);
+background:var(–panel); border:1px solid var(–line); border-radius:8px;
+padding:8px 10px; max-height:70px; overflow-y:auto; white-space:pre-wrap;
+display:none;
+}
+.raw-text.show{ display:block; }
+
+.candidates{
+margin-top:10px; display:flex; flex-wrap:wrap; gap:6px;
+display:none;
+}
+.candidates.show{ display:flex; }
+.candidates .label{ width:100%; font-size:11px; color:var(–text-dim); font-family:var(–mono); margin-bottom:2px; }
+.chip{
+background:var(–panel-2); border:1px solid var(–line); color:var(–text);
+border-radius:6px; padding:6px 10px; font-family:var(–mono); font-size:13px;
+}
+.chip:active{ background:var(–accent-dim); border-color:var(–accent); }
+
+.fields{
+margin-top:16px; display:flex; flex-direction:column; gap:10px;
+}
+.field{
+background:var(–panel); border:1px solid var(–line); border-radius:10px;
+padding:10px 12px;
+}
+.field label{
+display:flex; justify-content:space-between; align-items:center;
+font-size:11px; color:var(–text-dim); text-transform:uppercase; letter-spacing:0.04em;
+margin-bottom:6px;
+}
+.field label .assign-btns{ display:flex; gap:6px; }
+.assign-btn{
+background:var(–panel-2); border:1px solid var(–line); color:var(–text-dim);
+border-radius:5px; padding:3px 7px; font-size:10px; font-family:var(–mono);
+}
+.field input{
+width:100%; background:transparent; border:none; outline:none;
+color:var(–text); font-family:var(–mono); font-size:20px; font-weight:600;
+letter-spacing:0.02em;
+}
+.field input::placeholder{ color:#454b51; font-weight:400; }
+
+.generate{
+margin-top:16px; width:100%; padding:15px; border:none; border-radius:10px;
+background:var(–accent); color:#1a0f05; font-size:16px; font-weight:700;
+letter-spacing:0.01em;
+}
+.generate:disabled{ background:var(–panel-2); color:var(–text-dim); }
+.generate:active:not(:disabled){ transform:scale(0.98); }
+
+.clear-link{
+text-align:center; margin-top:10px; font-size:12px; color:var(–text-dim);
+text-decoration:underline; background:none; border:none;
+}
+
+.barcode-panel{
+margin-top:16px; background:#ffffff; border-radius:12px; padding:18px 10px 14px;
+text-align:center; display:none;
+}
+.barcode-panel.show{ display:block; }
+.barcode-panel svg{ width:100%; height:auto; }
+.barcode-value{
+margin-top:4px; font-family:var(–mono); font-size:13px; color:#1a1a1a;
+word-break:break-all; padding:0 6px;
+}
+.barcode-meta{
+margin-top:10px; font-size:11px; color:var(–text-dim); text-align:center;
+font-family:var(–mono);
+}
+
+.hint{
+margin-top:18px; font-size:12px; color:var(–text-dim); line-height:1.5;
+border-top:1px solid var(–line); padding-top:14px;
+}
+</style>
+
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <h1>Part / Batch → Barcode</h1>
+    <span class="status" id="statusText">starting camera…</span>
+  </header>
+
+  <div class="camera-wrap">
+    <video id="video" playsinline autoplay muted></video>
+    <div class="scan-frame"></div>
+  </div>
+  <canvas id="captureCanvas"></canvas>
+
+  <div class="shutter-row">
+    <button class="switch-cam" id="switchCamBtn" title="Switch camera">⟲</button>
+    <button class="shutter" id="captureBtn">●</button>
+    <div style="width:44px;"></div>
+  </div>
+
+  <div class="ocr-progress" id="ocrProgress"><div id="ocrProgressBar"></div></div>
+  <div class="raw-text" id="rawText"></div>
+
+  <div class="candidates" id="candidates">
+    <div class="label">Tap a detected value to assign it →</div>
+  </div>
+
+  <div class="fields">
+    <div class="field">
+      <label>
+        Part number
+        <span class="assign-btns"></span>
+      </label>
+      <input id="partInput" type="text" placeholder="e.g. AL-4021B" autocomplete="off" autocapitalize="characters">
+    </div>
+    <div class="field">
+      <label>
+        Batch number <span style="opacity:0.6; text-transform:none;">(optional)</span>
+      </label>
+      <input id="batchInput" type="text" placeholder="e.g. 240517" autocomplete="off" autocapitalize="characters">
+    </div>
+  </div>
+
+<button class="generate" id="generateBtn" disabled>Generate barcode</button>
+<button class="clear-link" id="clearBtn">Clear & scan again</button>
+
+  <div class="barcode-panel" id="barcodePanel">
+    <svg id="barcodeSvg"></svg>
+    <div class="barcode-value" id="barcodeValue"></div>
+  </div>
+  <div class="barcode-meta" id="barcodeMeta"></div>
+
+  <div class="hint">
+    Point the camera so the part number and batch number both sit inside the orange box, then tap the shutter.
+    Detected number-like strings appear as tappable chips — tap one, then tap Part or Batch to assign it.
+    You can also just type directly into either field. If a batch number is present, the barcode encodes
+    <b>PART/BATCH</b>; otherwise just <b>PART</b>.
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/JsBarcode/3.11.6/JsBarcode.all.min.js"></script>
+
+<script>
+(function(){
+  const video = document.getElementById('video');
+  const captureCanvas = document.getElementById('captureCanvas');
+  const captureBtn = document.getElementById('captureBtn');
+  const switchCamBtn = document.getElementById('switchCamBtn');
+  const statusText = document.getElementById('statusText');
+  const ocrProgress = document.getElementById('ocrProgress');
+  const ocrProgressBar = document.getElementById('ocrProgressBar');
+  const rawText = document.getElementById('rawText');
+  const candidatesEl = document.getElementById('candidates');
+  const partInput = document.getElementById('partInput');
+  const batchInput = document.getElementById('batchInput');
+  const generateBtn = document.getElementById('generateBtn');
+  const clearBtn = document.getElementById('clearBtn');
+  const barcodePanel = document.getElementById('barcodePanel');
+  const barcodeValue = document.getElementById('barcodeValue');
+  const barcodeMeta = document.getElementById('barcodeMeta');
+
+  let currentStream = null;
+  let facingMode = 'environment';
+  let lastAssignTarget = 'part'; // tracks which field a chip tap should fill next, toggles
+
+  // ---------- Camera ----------
+  async function startCamera(){
+    statusText.textContent = 'starting camera…';
+    if(currentStream){
+      currentStream.getTracks().forEach(t=>t.stop());
+    }
+    try{
+      const constraints = {
+        video: {
+          facingMode: { ideal: facingMode },
+          width: { ideal: 1920 },
+          height: { ideal: 1440 }
+        },
+        audio:false
+      };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      currentStream = stream;
+      video.srcObject = stream;
+      statusText.textContent = 'ready';
+    }catch(err){
+      statusText.textContent = 'camera error';
+      rawText.classList.add('show');
+      rawText.textContent = 'Camera access failed: ' + err.message + '\nCheck browser camera permissions.';
+    }
+  }
+
+  switchCamBtn.addEventListener('click', ()=>{
+    facingMode = (facingMode === 'environment') ? 'user' : 'environment';
+    startCamera();
+  });
+
+  startCamera();
+
+  // ---------- Capture + OCR ----------
+  captureBtn.addEventListener('click', async ()=>{
+    if(!video.videoWidth){ return; }
+    captureCanvas.width = video.videoWidth;
+    captureCanvas.height = video.videoHeight;
+    const ctx = captureCanvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, captureCanvas.width, captureCanvas.height);
+
+    ocrProgress.classList.add('active');
+    ocrProgressBar.style.width = '0%';
+    statusText.textContent = 'reading…';
+    generateBtn.disabled = true;
+
+    try{
+      const result = await Tesseract.recognize(captureCanvas, 'eng', {
+        logger: (m)=>{
+          if(m.status === 'recognizing text' && m.progress != null){
+            ocrProgressBar.style.width = Math.round(m.progress*100) + '%';
+          }
+        }
+      });
+      const text = result.data.text || '';
+      rawText.textContent = text.trim() || '(no text detected)';
+      rawText.classList.add('show');
+      populateCandidates(text);
+      statusText.textContent = 'done — check candidates';
+    }catch(err){
+      statusText.textContent = 'OCR failed';
+      rawText.classList.add('show');
+      rawText.textContent = 'OCR error: ' + err.message;
+    }finally{
+      ocrProgress.classList.remove('active');
+      updateGenerateState();
+    }
+  });
+
+  // ---------- Candidate extraction ----------
+  function populateCandidates(text){
+    // Pull tokens that look like part/batch numbers: alnum, dashes, at least 3 chars,
+    // containing at least one digit (filters out plain English words).
+    const rawTokens = text.split(/[\s,;:|]+/);
+    const seen = new Set();
+    const candidates = [];
+    for(let tok of rawTokens){
+      tok = tok.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, ''); // trim punctuation
+      if(tok.length < 3) continue;
+      if(!/\d/.test(tok)) continue; // must contain a digit
+      if(!/^[A-Za-z0-9\-\/]+$/.test(tok)) continue;
+      if(seen.has(tok)) continue;
+      seen.add(tok);
+      candidates.push(tok);
+    }
+
+    candidatesEl.innerHTML = '<div class="label">Tap a detected value to assign it →</div>';
+    if(candidates.length === 0){
+      candidatesEl.classList.remove('show');
+      return;
+    }
+    candidatesEl.classList.add('show');
+    candidates.forEach(tok=>{
+      const chip = document.createElement('button');
+      chip.className = 'chip';
+      chip.type = 'button';
+      chip.textContent = tok;
+      chip.addEventListener('click', ()=>{
+        assignToNextField(tok);
+      });
+      candidatesEl.appendChild(chip);
+    });
+  }
+
+  function assignToNextField(value){
+    // Fill part first if empty, else batch if empty, else alternate starting with part
+    if(!partInput.value){
+      partInput.value = value;
+    } else if(!batchInput.value){
+      batchInput.value = value;
+    } else {
+      // both filled — alternate, overwrite part
+      if(lastAssignTarget === 'part'){
+        batchInput.value = value;
+        lastAssignTarget = 'batch';
+      } else {
+        partInput.value = value;
+        lastAssignTarget = 'part';
+      }
+    }
+    updateGenerateState();
+  }
+
+  // ---------- Manual field assign buttons (long-press alt: simple click assign via labels) ----------
+  // Allow tapping a chip then immediately tapping a field to override — simplest is direct typing,
+  // already supported since inputs are editable.
+
+  [partInput, batchInput].forEach(el=>{
+    el.addEventListener('input', updateGenerateState);
+  });
+
+  function updateGenerateState(){
+    generateBtn.disabled = !partInput.value.trim();
+  }
+
+  // ---------- Barcode generation ----------
+  generateBtn.addEventListener('click', ()=>{
+    const part = partInput.value.trim().toUpperCase();
+    const batch = batchInput.value.trim().toUpperCase();
+    if(!part) return;
+    const encoded = batch ? (part + '/' + batch) : part;
+
+    try{
+      JsBarcode('#barcodeSvg', encoded, {
+        format: 'CODE128',
+        width: 2.4,
+        height: 90,
+        displayValue: false,
+        margin: 10,
+        background: '#ffffff',
+        lineColor: '#000000'
+      });
+      barcodeValue.textContent = encoded;
+      barcodeMeta.textContent = batch
+        ? 'Encoded as PART/BATCH — Code 128'
+        : 'Encoded as PART only (no batch entered) — Code 128';
+      barcodePanel.classList.add('show');
+      barcodePanel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+    }catch(err){
+      barcodeMeta.textContent = 'Barcode generation failed: ' + err.message;
+    }
+  });
+
+  clearBtn.addEventListener('click', ()=>{
+    partInput.value = '';
+    batchInput.value = '';
+    rawText.classList.remove('show');
+    rawText.textContent = '';
+    candidatesEl.classList.remove('show');
+    candidatesEl.innerHTML = '';
+    barcodePanel.classList.remove('show');
+    barcodeMeta.textContent = '';
+    lastAssignTarget = 'part';
+    updateGenerateState();
+    statusText.textContent = 'ready';
+  });
+
+})();
+</script>
+
+</body>
+</html>
