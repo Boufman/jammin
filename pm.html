@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PM Checklist - 07 Nov 2026</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    margin:0;
+    padding:15px;
+    background:#f5f5f5;
+}
+
+h1,h2{
+    margin:10px 0;
+}
+
+.card{
+    background:white;
+    margin-bottom:12px;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 2px 4px rgba(0,0,0,0.15);
+}
+
+.device-title{
+    font-size:18px;
+    font-weight:bold;
+}
+
+.time{
+    color:#666;
+    font-size:14px;
+}
+
+.tasks{
+    margin-top:10px;
+}
+
+.tasks label{
+    display:block;
+    padding:6px 0;
+}
+
+button{
+    width:100%;
+    padding:12px;
+    margin-top:10px;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    background:#0078d4;
+    color:white;
+}
+
+.progress{
+    position:sticky;
+    top:0;
+    background:#0078d4;
+    color:white;
+    padding:12px;
+    margin:-15px -15px 15px -15px;
+    font-size:18px;
+    z-index:100;
+}
+
+a{
+    color:#0078d4;
+    text-decoration:none;
+    font-weight:bold;
+}
+</style>
+</head>
+
+<body>
+
+<div class="progress">
+✅ Completed Devices: <span id="done">0</span> / <span id="total">0</span>
+</div>
+
+<h1>PM Schedule</h1>
+
+<p>
+<b>Date:</b> Saturday 07/11/2026
+<br>
+<a href="https://app.smartsheet.com/b/form/019b9734262b7ed7a94115eef3ce1e5c" target="_blank">
+Open SmartSheet PM Tracker
+</a>
+</p>
+
+<div id="devices"></div>
+
+<script>
+
+const taskList = [
+"Login HTA and test all drawers functionality as per Hardware Test Sequence",
+"Clean up debris (vacuum and brush)",
+"Uninstall older RSS component",
+"Install RSS 5.30",
+"Perform Windows Shutdown",
+"Turn off at device power switch",
+"Perform Electrical Safety Test",
+"Complete SmartSheet entry",
+"Power on device",
+"Allow Windows updates / firmware upgrades",
+"Pharmacist login verification",
+"Verify no hardware failures",
+"Verify storage space recovered",
+"Apply PM sticker to rear of display column"
+];
+
+const devices = [
+
+["08:00 - 08:30","OPTH2","Swap with ANAES2-3"],
+["08:30 - 09:00","OPTH4","Swap with ANAES4 if needed"],
+["09:00 - 09:30","OPTH6","Swap with ANAES5-6 if needed"],
+["09:30 - 10:00","OPTH9",""],
+["10:00 - 10:30","OPTH1","Swap with ANAES1"],
+["10:30 - 11:00","OPTH3",""],
+["11:00 - 11:30","OPTH8","Swap with ANAES8"],
+["11:30 - 12:00","OPTH7","Swap with PACUPROC"],
+["12:00 - 12:30","INTERVS1",""],
+
+["13:00 - 13:30","OPTH10",""],
+["13:30 - 14:00","OPTH11",""],
+["14:00 - 14:30","OPTH12",""],
+["14:30 - 15:00","OPTH13",""],
+["15:00 - 15:30","OPTH14",""],
+["15:30 - 16:00","OPTH15",""]
+
+];
+
+const container = document.getElementById("devices");
+
+devices.forEach((d,index)=>{
+
+const card=document.createElement("div");
+card.className="card";
+
+let html=`
+<div class="device-title">
+<input type="checkbox" class="device-check" id="device_${index}">
+${d[1]}
+</div>
+
+<div class="time">${d[0]}</div>
+`;
+
+if(d[2]){
+html+=`<div><i>${d[2]}</i></div>`;
+}
+
+html+=`<details>
+<summary><b>PM Tasks</b></summary>
+<div class="tasks">`;
+
+taskList.forEach((task,t)=>{
+html+=`
+<label>
+<input type="checkbox"
+class="task-check"
+id="task_${index}_${t}">
+${task}
+</label>`;
+});
+
+html+=`
+</div>
+</details>`;
+
+card.innerHTML=html;
+container.appendChild(card);
+});
+
+document.querySelectorAll("input[type=checkbox]").forEach(cb=>{
+
+const saved=localStorage.getItem(cb.id);
+
+if(saved==="true"){
+cb.checked=true;
+}
+
+cb.addEventListener("change",()=>{
+localStorage.setItem(cb.id,cb.checked);
+updateProgress();
+});
+
+});
+
+function updateProgress(){
+
+const total=document.querySelectorAll(".device-check").length;
+
+const done=document.querySelectorAll(".device-check:checked").length;
+
+document.getElementById("done").innerText=done;
+document.getElementById("total").innerText=total;
+}
+
+updateProgress();
+
+</script>
+
+</body>
+</html>
+
+
+
+
+
